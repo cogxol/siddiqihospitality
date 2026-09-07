@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Destination list to be filled in once the client provides the actual list.
+     Do not add destination names here without client confirmation. -->
+<odoo noupdate="1">
+</odoo>

@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="crm_lead_view_form_gopkz" model="ir.ui.view">
+        <field name="name">crm.lead.view.form.gopkz</field>
+        <field name="model">crm.lead</field>
+        <field name="inherit_id" ref="crm.crm_lead_view_form"/>
+        <field name="arch" type="xml">
+
+            <!--
+                Add a "Vendor Scoring" page to the lead form notebook.
+                The page is only visible when the lead belongs to the
+                Vendor Onboarding team (is_vendor_onboarding = True).
+
+                The is_vendor_onboarding field is non-stored/computed;
+                we include it as invisible="1" so the client loads it.
+
+                score_line_ids:
+                  - create="0" delete="0" on BOTH the outer <field> and the
+                    inner <list> per Section 12 of the spec — the outer one
+                    hides "Add a line", the inner one removes the draft row.
+                  - criteria_id carries force_save="1" per Section 0.1:
+                    it is readonly in the view and directly set by onchange
+                    with no other server-side source.
+            -->
+            <xpath expr="//notebook" position="inside">
+                <page string="Vendor Scoring" name="vendor_scoring"
+                      invisible="not is_vendor_onboarding">
+
+                    <!-- Non-stored helper — must be in the view for the
+                         invisible expressions above to work. -->
+                    <field name="is_vendor_onboarding" invisible="1"/>
+
+                    <group>
+                        <group string="Category &amp; Score">
+                            <field name="vendor_category_id"/>
+                            <field name="total_score" readonly="1"/>
+                            <field name="score_tier" readonly="1"/>
+                        </group>
+                        <group string="Scoring Status">
+                            <field name="scoring_confirmed" readonly="1"/>
+                            <button
+                                name="action_confirm_scoring"
+                                string="Confirm Scoring"
+                                type="object"
+                                class="btn-success"
+                                invisible="not vendor_category_id or scoring_confirmed"
+                            />
+                        </group>
+                    </group>
+
+                    <field name="score_line_ids"
+                           invisible="not vendor_category_id"
+                           create="0"
+                           delete="0">
+                        <list editable="bottom" create="0" delete="0">
+                            <field name="criteria_id"
+                                   readonly="1"
+                                   force_save="1"
+                                   string="Criterion"/>
+                            <field name="weight"
+                                   readonly="1"
+                                   string="Weight (%)"/>
+                            <field name="score"
+                                   string="Score (0–100)"
+                                   digits="[6,2]"/>
+                            <field name="score_entered"
+                                   invisible="1"/>
+                            <field name="weighted_score"
+                                   readonly="1"
+                                   string="Weighted Score"/>
+                        </list>
+                    </field>
+
+                </page>
+            </xpath>
+
+        </field>
+    </record>
+</odoo>

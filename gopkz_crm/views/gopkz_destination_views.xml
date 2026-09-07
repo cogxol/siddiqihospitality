@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- List view -->
+    <record id="view_gopkz_destination_list" model="ir.ui.view">
+        <field name="name">gopkz.destination.list</field>
+        <field name="model">gopkz.destination</field>
+        <field name="arch" type="xml">
+            <list string="Destinations" editable="top">
+                <field name="name"/>
+                <field name="active" column_invisible="1"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Form view -->
+    <record id="view_gopkz_destination_form" model="ir.ui.view">
+        <field name="name">gopkz.destination.form</field>
+        <field name="model">gopkz.destination</field>
+        <field name="arch" type="xml">
+            <form string="Destination">
+                <sheet>
+                    <group>
+                        <field name="name"/>
+                        <field name="active"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Action -->
+    <record id="action_gopkz_destination" model="ir.actions.act_window">
+        <field name="name">Destinations</field>
+        <field name="res_model">gopkz.destination</field>
+        <field name="view_mode">list,form</field>
+        <field name="context">{'active_test': False}</field>
+    </record>
+</odoo>

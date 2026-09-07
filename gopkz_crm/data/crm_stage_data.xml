@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Sequences use distinct ranges per team so ordering is unambiguous:
+     Vendor Onboarding: 10–60
+     Hot Lead Recovery: 110–130
+     Corporate Sales:   210–260
+
+     The post_init_hook archives any crm.stage records with no team_ids
+     (the four default Odoo stages that appear in every pipeline). -->
+<odoo noupdate="1">
+
+    <!-- ── Vendor Onboarding pipeline ──────────────────────────────────── -->
+    <record id="stage_vo_new" model="crm.stage">
+        <field name="name">New</field>
+        <field name="sequence">10</field>
+        <field name="is_won" eval="False"/>
+        <field name="team_ids" eval="[(4, ref('gopkz_crm.team_vendor_onboarding'))]"/>
+    </record>
+
+    <record id="stage_vo_qualifying" model="crm.stage">
+        <field name="name">Qualifying</field>
+        <field name="sequence">20</field>
+        <field name="is_won" eval="False"/>
+        <field name="team_ids" eval="[(4, ref('gopkz_crm.team_vendor_onboarding'))]"/>
+    </record>
+
+    <record id="stage_vo_negotiation" model="crm.stage">
+        <field name="name">Negotiation</field>
+        <field name="sequence">30</field>
+        <field name="is_won" eval="False"/>
+        <field name="team_ids" eval="[(4, ref('gopkz_crm.team_vendor_onboarding'))]"/>
+    </record>
+
+    <record id="stage_vo_agreement" model="crm.stage">
+        <field name="name">Agreement</field>
+        <field name="sequence">40</field>
+        <field name="is_won" eval="False"/>
+        <field name="team_ids" eval="[(4, ref('gopkz_crm.team_vendor_onboarding'))]"/>
+    </record>
+
+    <record id="stage_vo_onboarding" model="crm.stage">
+        <field name="name">Onboarding</field>
+        <field name="sequence">50</field>
+        <field name="is_won" eval="False"/>
+        <field name="team_ids" eval="[(4, ref('gopkz_crm.team_vendor_onboarding'))]"/>
+    </record>
+
+    <!-- Live = the "Won" stage for Vendor Onboarding -->
+    <record id="stage_vo_live" model="crm.stage">
+        <field name="name">Live</field>
+        <field name="sequence">60</field>
+        <field name="is_won" eval="True"/>
+        <field name="team_ids" eval="[(4, ref('gopkz_crm.team_vendor_onboarding'))]"/>
+    </record>
+
+    <!-- ── Hot Lead Recovery pipeline ──────────────────────────────────── -->
+    <record id="stage_hlr_new" model="crm.stage">
+        <field name="name">New Hot Lead</field>
+        <field name="sequence">110</field>
+        <field name="is_won" eval="False"/>
+        <field name="team_ids" eval="[(4, ref('gopkz_crm.team_hot_lead_recovery'))]"/>
+    </record>
+
+    <record id="stage_hlr_following" model="crm.stage">
+        <field name="name">Being Followed Up</field>
+        <field name="sequence">120</field>
+        <field name="is_won" eval="False"/>
+        <field name="team_ids" eval="[(4, ref('gopkz_crm.team_hot_lead_recovery'))]"/>
+    </record>
+
+    <!-- Recovered = the "Won" stage for Hot Lead Recovery -->
+    <record id="stage_hlr_recovered" model="crm.stage">
+        <field name="name">Recovered</field>
+        <field name="sequence">130</field>
+        <field name="is_won" eval="True"/>
+        <field name="team_ids" eval="[(4, ref('gopkz_crm.team_hot_lead_recovery'))]"/>
+    </record>
+
+    <!-- ── Corporate Sales pipeline ─────────────────────────────────────── -->
+    <record id="stage_cs_prospect" model="crm.stage">
+        <field name="name">Prospect</field>
+        <field name="sequence">210</field>
+        <field name="is_won" eval="False"/>
+        <field name="team_ids" eval="[(4, ref('gopkz_crm.team_corporate_sales'))]"/>
+    </record>
+
+    <record id="stage_cs_qualifying" model="crm.stage">
+        <field name="name">Qualifying</field>
+        <field name="sequence">220</field>
+        <field name="is_won" eval="False"/>
+        <field name="team_ids" eval="[(4, ref('gopkz_crm.team_corporate_sales'))]"/>
+    </record>
+
+    <record id="stage_cs_proposal" model="crm.stage">
+        <field name="name">Proposal</field>
+        <field name="sequence">230</field>
+        <field name="is_won" eval="False"/>
+        <field name="team_ids" eval="[(4, ref('gopkz_crm.team_corporate_sales'))]"/>
+    </record>
+
+    <record id="stage_cs_negotiation" model="crm.stage">
+        <field name="name">Negotiation</field>
+        <field name="sequence">240</field>
+        <field name="is_won" eval="False"/>
+        <field name="team_ids" eval="[(4, ref('gopkz_crm.team_corporate_sales'))]"/>
+    </record>
+
+    <record id="stage_cs_agreement" model="crm.stage">
+        <field name="name">Agreement</field>
+        <field name="sequence">250</field>
+        <field name="is_won" eval="False"/>
+        <field name="team_ids" eval="[(4, ref('gopkz_crm.team_corporate_sales'))]"/>
+    </record>
+
+    <!-- Active = the "Won" stage for Corporate Sales -->
+    <record id="stage_cs_active" model="crm.stage">
+        <field name="name">Active</field>
+        <field name="sequence">260</field>
+        <field name="is_won" eval="True"/>
+        <field name="team_ids" eval="[(4, ref('gopkz_crm.team_corporate_sales'))]"/>
+    </record>
+
+</odoo>

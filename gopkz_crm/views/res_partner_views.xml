@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!--
+        Single inheriting view that adds all three groups to the partner
+        Sales & Purchase tab (per Section 12 — not three separate inheritances).
+
+        XPath 1: Adds vendor_category_id and x_is_corporate_account to the
+                 existing "Misc" group on the Sales & Purchase tab.
+
+        XPath 2: Inserts a "Vendor Details" group (visible when
+                 vendor_category_id is set) and a "Corporate Account Details"
+                 group (visible when x_is_corporate_account is True) after
+                 the existing container row.
+    -->
+    <record id="view_partner_form_gopkz" model="ir.ui.view">
+        <field name="name">res.partner.form.gopkz</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="base.view_partner_form"/>
+        <field name="arch" type="xml">
+
+            <!-- 1. vendor_category_id and x_is_corporate_account in the
+                    existing Misc group on Sales & Purchase tab -->
+            <xpath expr="//page[@name='sales_purchases']//group[@name='misc']"
+                   position="inside">
+                <field name="vendor_category_id"/>
+                <field name="x_is_corporate_account"/>
+            </xpath>
+
+            <!-- 2. Vendor Details and Corporate Account Details groups -->
+            <xpath expr="//page[@name='sales_purchases']//group[@name='container_row_2']"
+                   position="after">
+
+                <group string="Vendor Details"
+                       invisible="not vendor_category_id">
+                    <field name="x_destination_ids"
+                           widget="many2many_tags"
+                           string="Destinations"/>
+                    <field name="x_capacity"
+                           string="Inventory / Capacity"
+                           help="Number of rooms, vehicles, or products, depending on vendor type."/>
+                    <field name="x_commission_percentage"
+                           string="Commission %"/>
+                    <field name="x_settlement_cycle"
+                           string="Settlement Cycle"/>
+                    <field name="x_has_api_extranet"
+                           string="Has API / Extranet Integration"/>
+                </group>
+
+                <group string="Corporate Account Details"
+                       invisible="not x_is_corporate_account">
+                    <field name="x_company_size"
+                           string="Company Size"/>
+                    <field name="x_annual_travel_volume"
+                           string="Est. Annual Trips"/>
+                    <field name="x_current_travel_provider"
+                           string="Current Travel Provider"/>
+                </group>
+
+            </xpath>
+
+        </field>
+    </record>
+</odoo>

@@ -1,0 +1,203 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Scoring criteria per vendor category.  Weights sum to 100 for each category.
+     Hotel (7 criteria): 20+20+20+15+10+10+5 = 100
+     Car Rental (8 criteria): 20+20+15+15+10+10+5+5 = 100
+     Tour (8 criteria): 20+15+15+15+10+10+10+5 = 100
+     Experience (8 criteria): 25+20+15+15+10+5+5+5 = 100  -->
+<odoo noupdate="1">
+
+    <!-- ── Hotel ────────────────────────────────────────────────────────── -->
+    <record id="criteria_hotel_adr" model="gopkz.scoring.criteria">
+        <field name="name">ADR / Price Positioning</field>
+        <field name="category_id" ref="gopkz_crm.vendor_cat_hotel"/>
+        <field name="sequence">10</field>
+        <field name="weight">20</field>
+    </record>
+    <record id="criteria_hotel_location" model="gopkz.scoring.criteria">
+        <field name="name">Location</field>
+        <field name="category_id" ref="gopkz_crm.vendor_cat_hotel"/>
+        <field name="sequence">20</field>
+        <field name="weight">20</field>
+    </record>
+    <record id="criteria_hotel_quality" model="gopkz.scoring.criteria">
+        <field name="name">Property Quality</field>
+        <field name="category_id" ref="gopkz_crm.vendor_cat_hotel"/>
+        <field name="sequence">30</field>
+        <field name="weight">20</field>
+    </record>
+    <record id="criteria_hotel_demand" model="gopkz.scoring.criteria">
+        <field name="name">Demand Potential</field>
+        <field name="category_id" ref="gopkz_crm.vendor_cat_hotel"/>
+        <field name="sequence">40</field>
+        <field name="weight">15</field>
+    </record>
+    <record id="criteria_hotel_inventory" model="gopkz.scoring.criteria">
+        <field name="name">Inventory</field>
+        <field name="category_id" ref="gopkz_crm.vendor_cat_hotel"/>
+        <field name="sequence">50</field>
+        <field name="weight">10</field>
+    </record>
+    <record id="criteria_hotel_commercial" model="gopkz.scoring.criteria">
+        <field name="name">Commercial Potential</field>
+        <field name="category_id" ref="gopkz_crm.vendor_cat_hotel"/>
+        <field name="sequence">60</field>
+        <field name="weight">10</field>
+    </record>
+    <record id="criteria_hotel_reputation" model="gopkz.scoring.criteria">
+        <field name="name">Reputation / Reviews</field>
+        <field name="category_id" ref="gopkz_crm.vendor_cat_hotel"/>
+        <field name="sequence">70</field>
+        <field name="weight">5</field>
+    </record>
+
+    <!-- ── Car Rental ───────────────────────────────────────────────────── -->
+    <record id="criteria_car_fleet_quality" model="gopkz.scoring.criteria">
+        <field name="name">Fleet Quality</field>
+        <field name="category_id" ref="gopkz_crm.vendor_cat_car_rental"/>
+        <field name="sequence">10</field>
+        <field name="weight">20</field>
+    </record>
+    <record id="criteria_car_fleet_size" model="gopkz.scoring.criteria">
+        <field name="name">Fleet Size &amp; Availability</field>
+        <field name="category_id" ref="gopkz_crm.vendor_cat_car_rental"/>
+        <field name="sequence">20</field>
+        <field name="weight">20</field>
+    </record>
+    <record id="criteria_car_location" model="gopkz.scoring.criteria">
+        <field name="name">Location / Coverage</field>
+        <field name="category_id" ref="gopkz_crm.vendor_cat_car_rental"/>
+        <field name="sequence">30</field>
+        <field name="weight">15</field>
+    </record>
+    <record id="criteria_car_pricing" model="gopkz.scoring.criteria">
+        <field name="name">Pricing Competitiveness</field>
+        <field name="category_id" ref="gopkz_crm.vendor_cat_car_rental"/>
+        <field name="sequence">40</field>
+        <field name="weight">15</field>
+    </record>
+    <record id="criteria_car_service" model="gopkz.scoring.criteria">
+        <field name="name">Service Quality</field>
+        <field name="category_id" ref="gopkz_crm.vendor_cat_car_rental"/>
+        <field name="sequence">50</field>
+        <field name="weight">10</field>
+    </record>
+    <record id="criteria_car_demand" model="gopkz.scoring.criteria">
+        <field name="name">Demand Potential</field>
+        <field name="category_id" ref="gopkz_crm.vendor_cat_car_rental"/>
+        <field name="sequence">60</field>
+        <field name="weight">10</field>
+    </record>
+    <record id="criteria_car_commercial" model="gopkz.scoring.criteria">
+        <field name="name">Commercial Potential</field>
+        <field name="category_id" ref="gopkz_crm.vendor_cat_car_rental"/>
+        <field name="sequence">70</field>
+        <field name="weight">5</field>
+    </record>
+    <record id="criteria_car_compliance" model="gopkz.scoring.criteria">
+        <field name="name">Compliance &amp; Documentation</field>
+        <field name="category_id" ref="gopkz_crm.vendor_cat_car_rental"/>
+        <field name="sequence">80</field>
+        <field name="weight">5</field>
+    </record>
+
+    <!-- ── Tour ─────────────────────────────────────────────────────────── -->
+    <record id="criteria_tour_quality" model="gopkz.scoring.criteria">
+        <field name="name">Tour / Product Quality</field>
+        <field name="category_id" ref="gopkz_crm.vendor_cat_tour"/>
+        <field name="sequence">10</field>
+        <field name="weight">20</field>
+    </record>
+    <record id="criteria_tour_destination" model="gopkz.scoring.criteria">
+        <field name="name">Destination Relevance</field>
+        <field name="category_id" ref="gopkz_crm.vendor_cat_tour"/>
+        <field name="sequence">20</field>
+        <field name="weight">15</field>
+    </record>
+    <record id="criteria_tour_pricing" model="gopkz.scoring.criteria">
+        <field name="name">Pricing Competitiveness</field>
+        <field name="category_id" ref="gopkz_crm.vendor_cat_tour"/>
+        <field name="sequence">30</field>
+        <field name="weight">15</field>
+    </record>
+    <record id="criteria_tour_operational" model="gopkz.scoring.criteria">
+        <field name="name">Operational Capability</field>
+        <field name="category_id" ref="gopkz_crm.vendor_cat_tour"/>
+        <field name="sequence">40</field>
+        <field name="weight">15</field>
+    </record>
+    <record id="criteria_tour_reviews" model="gopkz.scoring.criteria">
+        <field name="name">Reviews / Reputation</field>
+        <field name="category_id" ref="gopkz_crm.vendor_cat_tour"/>
+        <field name="sequence">50</field>
+        <field name="weight">10</field>
+    </record>
+    <record id="criteria_tour_availability" model="gopkz.scoring.criteria">
+        <field name="name">Availability &amp; Capacity</field>
+        <field name="category_id" ref="gopkz_crm.vendor_cat_tour"/>
+        <field name="sequence">60</field>
+        <field name="weight">10</field>
+    </record>
+    <record id="criteria_tour_commercial" model="gopkz.scoring.criteria">
+        <field name="name">Commercial Potential</field>
+        <field name="category_id" ref="gopkz_crm.vendor_cat_tour"/>
+        <field name="sequence">70</field>
+        <field name="weight">10</field>
+    </record>
+    <record id="criteria_tour_safety" model="gopkz.scoring.criteria">
+        <field name="name">Safety &amp; Compliance</field>
+        <field name="category_id" ref="gopkz_crm.vendor_cat_tour"/>
+        <field name="sequence">80</field>
+        <field name="weight">5</field>
+    </record>
+
+    <!-- ── Experience ───────────────────────────────────────────────────── -->
+    <record id="criteria_exp_quality" model="gopkz.scoring.criteria">
+        <field name="name">Experience Quality &amp; Uniqueness</field>
+        <field name="category_id" ref="gopkz_crm.vendor_cat_experience"/>
+        <field name="sequence">10</field>
+        <field name="weight">25</field>
+    </record>
+    <record id="criteria_exp_demand" model="gopkz.scoring.criteria">
+        <field name="name">Demand Potential</field>
+        <field name="category_id" ref="gopkz_crm.vendor_cat_experience"/>
+        <field name="sequence">20</field>
+        <field name="weight">20</field>
+    </record>
+    <record id="criteria_exp_location" model="gopkz.scoring.criteria">
+        <field name="name">Location</field>
+        <field name="category_id" ref="gopkz_crm.vendor_cat_experience"/>
+        <field name="sequence">30</field>
+        <field name="weight">15</field>
+    </record>
+    <record id="criteria_exp_safety" model="gopkz.scoring.criteria">
+        <field name="name">Safety &amp; Compliance</field>
+        <field name="category_id" ref="gopkz_crm.vendor_cat_experience"/>
+        <field name="sequence">40</field>
+        <field name="weight">15</field>
+    </record>
+    <record id="criteria_exp_pricing" model="gopkz.scoring.criteria">
+        <field name="name">Pricing</field>
+        <field name="category_id" ref="gopkz_crm.vendor_cat_experience"/>
+        <field name="sequence">50</field>
+        <field name="weight">10</field>
+    </record>
+    <record id="criteria_exp_reviews" model="gopkz.scoring.criteria">
+        <field name="name">Reviews / Reputation</field>
+        <field name="category_id" ref="gopkz_crm.vendor_cat_experience"/>
+        <field name="sequence">60</field>
+        <field name="weight">5</field>
+    </record>
+    <record id="criteria_exp_capacity" model="gopkz.scoring.criteria">
+        <field name="name">Capacity &amp; Availability</field>
+        <field name="category_id" ref="gopkz_crm.vendor_cat_experience"/>
+        <field name="sequence">70</field>
+        <field name="weight">5</field>
+    </record>
+    <record id="criteria_exp_commercial" model="gopkz.scoring.criteria">
+        <field name="name">Commercial Potential</field>
+        <field name="category_id" ref="gopkz_crm.vendor_cat_experience"/>
+        <field name="sequence">80</field>
+        <field name="weight">5</field>
+    </record>
+
+</odoo>
