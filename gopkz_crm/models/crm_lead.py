@@ -75,6 +75,16 @@ class CrmLead(models.Model):
         store=False,
     )
 
+    # True only for Odoo System Administrators.
+    # Drives readonly="not is_pipeline_editor" on the team_id (Pipeline) field
+    # so that ordinary users can see the pipeline but cannot reassign it.
+    # @api.depends_context('uid') caches the result per user, not per record.
+    is_pipeline_editor = fields.Boolean(
+        string='Can Edit Pipeline',
+        compute='_compute_is_pipeline_editor',
+        store=False,
+    )
+
     # ── Compute methods ──────────────────────────────────────────────────────
 
     @api.depends('team_id')
@@ -104,6 +114,16 @@ class CrmLead(models.Model):
                 and lead.team_id.id == vo_team.id
                 and lead.stage_id.sequence > qualifying.sequence
             )
+
+    @api.depends_context('uid')
+    def _compute_is_pipeline_editor(self):
+        """True only for Odoo System Administrators.
+        Cached per user (depends_context uid) so the flag re-evaluates
+        when a different user opens the record — not on every field change.
+        """
+        is_admin = self.env.user.has_group('base.group_system')
+        for lead in self:
+            lead.is_pipeline_editor = is_admin
 
     @api.depends('lost_reason_id')
     def _compute_x_is_lost_other(self):

@@ -7,6 +7,51 @@
         <field name="arch" type="xml">
 
             <!--
+                Declare is_pipeline_editor right after the lead_info group so
+                the client loads its value for all lead/opportunity types.
+                The field is always invisible — it is only used to gate the
+                readonly attribute on team_id (Pipeline) below.
+            -->
+            <xpath expr="//group[@name='lead_info']" position="after">
+                <field name="is_pipeline_editor" invisible="1"/>
+            </xpath>
+
+            <!--
+                Add "Pipeline" (team_id) to the OPPORTUNITY right-column group.
+                The standard form has team_id in the Contacts tab for
+                opportunities, which is not visible on first open.
+                This adds a prominently placed read (for all) / write (admin)
+                copy in the main info area.
+                readonly="not is_pipeline_editor" → editable only by sysadmin.
+            -->
+            <xpath expr="//group[@invisible=&quot;type == 'lead'&quot;]/field[@name='tag_ids']" position="after">
+                <field name="team_id"
+                       string="Pipeline"
+                       options="{'no_open': True, 'no_create': True}"
+                       readonly="not is_pipeline_editor"/>
+            </xpath>
+
+            <!--
+                Relabel and restrict the team_id that is in the LEAD right-
+                column group (visible when type == 'lead').
+            -->
+            <xpath expr="//group[@invisible=&quot;type == 'opportunity'&quot;]/field[@name='team_id']" position="attributes">
+                <attribute name="string">Pipeline</attribute>
+                <attribute name="readonly">not is_pipeline_editor</attribute>
+            </xpath>
+
+            <!--
+                The Contacts tab → Ownership group also shows team_id.
+                Mark it always readonly there: the right-column field above
+                is the single authoritative edit point for admins; this copy
+                is purely informational.
+            -->
+            <xpath expr="//group[@name='Misc']/field[@name='team_id']" position="attributes">
+                <attribute name="string">Pipeline</attribute>
+                <attribute name="readonly">1</attribute>
+            </xpath>
+
+            <!--
                 Make lost_reason_id read-only once the lead is lost.
                 won_status == 'lost' means active=False (archived by Mark Lost).
                 After restore, won_status returns to 'pending' so the field
