@@ -7,14 +7,29 @@
         <field name="arch" type="xml">
 
             <!--
-                Show x_lost_reason_detail next to lost_reason_id when the
-                lead is lost and "Other" was the reason given.
+                Make lost_reason_id read-only once the lead is lost.
+                won_status == 'lost' means active=False (archived by Mark Lost).
+                After restore, won_status returns to 'pending' so the field
+                becomes editable again (and Odoo also clears lost_reason_id
+                on restore, so it's invisible anyway).
+            -->
+            <xpath expr="//field[@name='lost_reason_id']" position="attributes">
+                <attribute name="readonly">won_status == 'lost'</attribute>
+            </xpath>
+
+            <!--
+                Show x_lost_reason_detail only when:
+                  - The lead is lost (won_status == 'lost')
+                  - The reason is specifically "Other" (x_is_lost_other)
+                x_is_lost_other is a non-stored computed Boolean on crm.lead
+                that checks lost_reason_id against gopkz_crm.lost_reason_other.
             -->
             <xpath expr="//field[@name='lost_reason_id']" position="after">
+                <field name="x_is_lost_other" invisible="1"/>
                 <field name="x_lost_reason_detail"
                        string="Other Reason Detail"
                        readonly="1"
-                       invisible="not x_lost_reason_detail or won_status != 'lost'"/>
+                       invisible="won_status != 'lost' or not x_is_lost_other"/>
             </xpath>
 
             <!--

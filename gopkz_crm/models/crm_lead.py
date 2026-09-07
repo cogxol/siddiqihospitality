@@ -52,6 +52,13 @@ class CrmLead(models.Model):
         string='Other Reason Detail',
         help='Manual reason text entered when "Other" is selected as the lost reason.',
     )
+    # Non-stored helper: True when lost_reason_id is our "Other" record.
+    # Used in the view to toggle x_lost_reason_detail visibility without
+    # relying on ref() in XML expressions (which isn't supported there).
+    x_is_lost_other = fields.Boolean(
+        compute='_compute_x_is_lost_other',
+        store=False,
+    )
 
     # ── UI helpers (non-stored) ──────────────────────────────────────────────
     is_vendor_onboarding = fields.Boolean(
@@ -97,6 +104,12 @@ class CrmLead(models.Model):
                 and lead.team_id.id == vo_team.id
                 and lead.stage_id.sequence > qualifying.sequence
             )
+
+    @api.depends('lost_reason_id')
+    def _compute_x_is_lost_other(self):
+        other = self.env.ref('gopkz_crm.lost_reason_other', raise_if_not_found=False)
+        for lead in self:
+            lead.x_is_lost_other = bool(other and lead.lost_reason_id == other)
 
     @api.depends('score_line_ids.weighted_score')
     def _compute_total_score(self):
