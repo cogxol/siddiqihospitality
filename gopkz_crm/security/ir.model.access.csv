@@ -5,5 +5,4 @@ access_gopkz_destination_user,gopkz.destination (user read),model_gopkz_destinat
 access_gopkz_destination_manager,gopkz.destination (manager full),model_gopkz_destination,gopkz_crm.group_vendor_manager,1,1,1,1
 access_gopkz_scoring_criteria_user,gopkz.scoring.criteria (user read),model_gopkz_scoring_criteria,base.group_user,1,0,0,0
 access_gopkz_scoring_criteria_manager,gopkz.scoring.criteria (manager full),model_gopkz_scoring_criteria,gopkz_crm.group_vendor_manager,1,1,1,1
-access_gopkz_lead_score_line_user,gopkz.lead.score.line (user read),model_gopkz_lead_score_line,base.group_user,1,0,0,0
-access_gopkz_lead_score_line_manager,gopkz.lead.score.line (manager full),model_gopkz_lead_score_line,gopkz_crm.group_vendor_manager,1,1,1,1
+access_gopkz_lead_score_line_user,gopkz.lead.score.line (user full),model_gopkz_lead_score_line,base.group_user,1,1,1,1
