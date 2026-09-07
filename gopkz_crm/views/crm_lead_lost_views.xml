@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!--
+        Extend the "Mark Lost" wizard to:
+        1. Make Lost Reason mandatory (required="1" in the view + server-side
+           validation in action_lost_reason_apply).
+        2. Show a "Please specify" text field when "Other" is selected —
+           also mandatory when visible.
+    -->
+    <record id="crm_lead_lost_view_form_gopkz" model="ir.ui.view">
+        <field name="name">crm.lead.lost.form.gopkz</field>
+        <field name="model">crm.lead.lost</field>
+        <field name="inherit_id" ref="crm.crm_lead_lost_view_form"/>
+        <field name="arch" type="xml">
+
+            <!-- Make the reason selector mandatory -->
+            <xpath expr="//field[@name='lost_reason_id']" position="attributes">
+                <attribute name="required">1</attribute>
+                <attribute name="string">Lost Reason</attribute>
+            </xpath>
+
+            <!-- Add the "Other" free-text field immediately after the reason -->
+            <xpath expr="//field[@name='lost_reason_id']" position="after">
+                <!-- is_other_reason is our computed helper on the wizard -->
+                <field name="is_other_reason" invisible="1"/>
+                <field name="lost_reason_other"
+                       string="Please specify"
+                       placeholder="Describe the reason…"
+                       invisible="not is_other_reason"
+                       required="is_other_reason"/>
+            </xpath>
+
+        </field>
+    </record>
+</odoo>

@@ -21,6 +21,7 @@
         'views/gopkz_scoring_criteria_views.xml',
         'views/gopkz_destination_views.xml',
         'views/crm_lead_views.xml',
+        'views/crm_lead_lost_views.xml',
         'views/res_partner_views.xml',
         'views/menus.xml',
     ],

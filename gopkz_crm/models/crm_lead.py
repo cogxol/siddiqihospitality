@@ -47,10 +47,24 @@ class CrmLead(models.Model):
         store=True,
     )
 
-    # ── UI helper (non-stored) ───────────────────────────────────────────────
+    # ── Lost reason "Other" detail ───────────────────────────────────────────
+    x_lost_reason_detail = fields.Char(
+        string='Other Reason Detail',
+        help='Manual reason text entered when "Other" is selected as the lost reason.',
+    )
+
+    # ── UI helpers (non-stored) ──────────────────────────────────────────────
     is_vendor_onboarding = fields.Boolean(
         string='Is Vendor Onboarding Team',
         compute='_compute_is_vendor_onboarding',
+        store=False,
+    )
+
+    # True when the lead is on the Vendor Onboarding team AND past Qualifying.
+    # When True the score lines become read-only and Confirm Scoring is hidden.
+    scoring_locked = fields.Boolean(
+        string='Scoring Locked',
+        compute='_compute_scoring_locked',
         store=False,
     )
 
@@ -64,6 +78,24 @@ class CrmLead(models.Model):
         for lead in self:
             lead.is_vendor_onboarding = bool(
                 vo_team and lead.team_id.id == vo_team.id
+            )
+
+    @api.depends('team_id', 'stage_id')
+    def _compute_scoring_locked(self):
+        """Lock scoring once the lead has advanced past Qualifying in the
+        Vendor Onboarding pipeline.  Moving back to Qualifying unlocks it."""
+        vo_team = self.env.ref(
+            'gopkz_crm.team_vendor_onboarding', raise_if_not_found=False
+        )
+        qualifying = self.env.ref(
+            'gopkz_crm.stage_vo_qualifying', raise_if_not_found=False
+        )
+        for lead in self:
+            lead.scoring_locked = bool(
+                vo_team
+                and qualifying
+                and lead.team_id.id == vo_team.id
+                and lead.stage_id.sequence > qualifying.sequence
             )
 
     @api.depends('score_line_ids.weighted_score')
@@ -114,9 +146,11 @@ class CrmLead(models.Model):
 
     @api.onchange('score_line_ids')
     def _onchange_score_line_ids(self):
-        """Clear the confirmed badge whenever score lines are touched
-        (line added, removed, or a score edited)."""
-        if self.scoring_confirmed:
+        """Clear the confirmed badge when score lines change — but only while
+        still at or before Qualifying.  Past Qualifying the scores are locked
+        so this onchange won't fire from the UI anyway, but the guard keeps
+        the ORM path consistent."""
+        if self.scoring_confirmed and not self.scoring_locked:
             self.scoring_confirmed = False
 
     # ── Actions ──────────────────────────────────────────────────────────────

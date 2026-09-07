@@ -7,32 +7,49 @@
         <field name="arch" type="xml">
 
             <!--
+                Show x_lost_reason_detail next to lost_reason_id when the
+                lead is lost and "Other" was the reason given.
+            -->
+            <xpath expr="//field[@name='lost_reason_id']" position="after">
+                <field name="x_lost_reason_detail"
+                       string="Other Reason Detail"
+                       readonly="1"
+                       invisible="not x_lost_reason_detail or won_status != 'lost'"/>
+            </xpath>
+
+            <!--
                 Add a "Vendor Scoring" page to the lead form notebook.
                 The page is only visible when the lead belongs to the
                 Vendor Onboarding team (is_vendor_onboarding = True).
 
-                The is_vendor_onboarding field is non-stored/computed;
-                we include it as invisible="1" so the client loads it.
+                is_vendor_onboarding and scoring_locked are non-stored
+                computed fields; both must be present in the view (even if
+                invisible) so the client loads and re-evaluates them on
+                field changes.
+
+                scoring_locked becomes True once the lead has advanced past
+                Qualifying — at that point the Score column becomes readonly
+                (parent.scoring_locked) and Confirm Scoring is hidden.
 
                 score_line_ids:
                   - create="0" delete="0" on BOTH the outer <field> and the
-                    inner <list> per Section 12 of the spec — the outer one
-                    hides "Add a line", the inner one removes the draft row.
-                  - criteria_id carries force_save="1" per Section 0.1:
-                    it is readonly in the view and directly set by onchange
-                    with no other server-side source.
+                    inner <list> per Section 12 of the spec.
+                  - criteria_id carries force_save="1" per Section 0.1.
+                  - score is readonly when parent.scoring_locked (past
+                    Qualifying in the VO pipeline).
             -->
             <xpath expr="//notebook" position="inside">
                 <page string="Vendor Scoring" name="vendor_scoring"
                       invisible="not is_vendor_onboarding">
 
-                    <!-- Non-stored helper — must be in the view for the
-                         invisible expressions above to work. -->
+                    <!-- Non-stored helpers loaded by the client. -->
                     <field name="is_vendor_onboarding" invisible="1"/>
+                    <field name="scoring_locked" invisible="1"/>
 
                     <group>
                         <group string="Category &amp; Score">
-                            <field name="vendor_category_id"/>
+                            <field name="vendor_category_id"
+                                   readonly="scoring_locked"/>
                             <field name="total_score" readonly="1"/>
                             <field name="score_tier" readonly="1"/>
                         </group>
@@ -43,7 +60,7 @@
                                 string="Confirm Scoring"
                                 type="object"
                                 class="btn-success"
-                                invisible="not vendor_category_id or scoring_confirmed"
+                                invisible="not vendor_category_id or scoring_confirmed or scoring_locked"
                             />
                         </group>
                     </group>
@@ -62,7 +79,8 @@
                                    string="Weight (%)"/>
                             <field name="score"
                                    string="Score (0–100)"
-                                   digits="[6,2]"/>
+                                   digits="[6,2]"
+                                   readonly="parent.scoring_locked"/>
                             <field name="score_entered"
                                    invisible="1"/>
                             <field name="weighted_score"
