@@ -1,5 +1,26 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo noupdate="1">
+    <!--
+        Sink team that "owns" the four default Odoo stages (New, Qualified,
+        Proposition, Won) after the post_init_hook re-assigns them.
+
+        Why we need this:
+        - Stages with team_ids = False appear in EVERY pipeline's kanban view;
+          we want our three custom pipelines to show only their own stages.
+        - Simply unlinking those stages breaks Odoo's crm_stage_demo.xml
+          (it holds a forcecreate="False" record for stage_lead3 that then
+          tries to INSERT without a name, hitting a NOT NULL error).
+        - The fix: keep the records alive (preserving their ir.model.data
+          XML IDs) but assign them to this archived team so they are
+          invisible to all active pipelines.
+
+        The team is archived (active=False) so it never surfaces in the UI.
+    -->
+    <record id="team_default_stages_sink" model="crm.team">
+        <field name="name">Default Stages (hidden)</field>
+        <field name="active" eval="False"/>
+    </record>
+
     <record id="team_vendor_onboarding" model="crm.team">
         <field name="name">Vendor Onboarding</field>
         <field name="use_opportunities" eval="True"/>
