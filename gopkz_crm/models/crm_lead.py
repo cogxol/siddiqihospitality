@@ -1,10 +1,19 @@
 # -*- coding: utf-8 -*-
+import calendar
 from odoo import api, fields, models
 from odoo.exceptions import UserError
 
 
 class CrmLead(models.Model):
     _inherit = 'crm.lead'
+
+    # ── Booking ID ──────────────────────────────────────────────────────────
+    booking_id = fields.Char(
+        string='Booking ID',
+        readonly=True,
+        copy=False,
+        tracking=True,
+    )
 
     # ── Vendor Category ──────────────────────────────────────────────────────
     vendor_category_id = fields.Many2one(
@@ -60,10 +69,33 @@ class CrmLead(models.Model):
         store=False,
     )
 
+    # ── Hot Lead Recovery vendor lines ───────────────────────────────────────
+    hlr_vendor_line_ids = fields.One2many(
+        'gopkz.booking.vendor.line',
+        'lead_id',
+        string='Vendors',
+    )
+
+    # ── Hot Lead Recovery customer type ─────────────────────────────────────
+    hlr_customer_type = fields.Selection(
+        selection=[
+            ('corporate_reservation', 'Corporate Reservation'),
+            ('direct_customer', 'Direct Customer'),
+        ],
+        string='Customer Type',
+        tracking=True,
+    )
+
     # ── UI helpers (non-stored) ──────────────────────────────────────────────
     is_vendor_onboarding = fields.Boolean(
         string='Is Vendor Onboarding Team',
         compute='_compute_is_vendor_onboarding',
+        store=False,
+    )
+
+    is_hot_lead_recovery = fields.Boolean(
+        string='Is Hot Lead Recovery Team',
+        compute='_compute_is_hot_lead_recovery',
         store=False,
     )
 
@@ -95,6 +127,16 @@ class CrmLead(models.Model):
         for lead in self:
             lead.is_vendor_onboarding = bool(
                 vo_team and lead.team_id.id == vo_team.id
+            )
+
+    @api.depends('team_id')
+    def _compute_is_hot_lead_recovery(self):
+        hlr_team = self.env.ref(
+            'gopkz_crm.team_hot_lead_recovery', raise_if_not_found=False
+        )
+        for lead in self:
+            lead.is_hot_lead_recovery = bool(
+                hlr_team and lead.team_id.id == hlr_team.id
             )
 
     @api.depends('team_id', 'stage_id')
@@ -208,6 +250,51 @@ class CrmLead(models.Model):
             )
         # Only does two things: gate check (above) and set flag (below).
         self.write({'scoring_confirmed': True})
+
+    # ── Create override — auto-assign sequential Booking ID ─────────────────
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        for vals in vals_list:
+            if not vals.get('booking_id'):
+                vals['booking_id'] = self._generate_booking_id()
+        return super().create(vals_list)
+
+    def _generate_booking_id(self):
+        """Return the next booking ID, resetting the counter every month.
+
+        Odoo's ir.sequence with use_date_range=True resets per date-range
+        record.  By default it creates *yearly* ranges; we pre-create a
+        monthly range before calling next_by_code() so the counter starts
+        fresh on the 1st of each month while the prefix (BK%(y)s%(month)s)
+        correctly reflects the range's date_from.
+        """
+        today = fields.Date.today()
+        seq = self.env['ir.sequence'].sudo().search(
+            [('code', '=', 'crm.lead.booking')], limit=1
+        )
+        if not seq:
+            return False
+
+        first_day = today.replace(day=1)
+        last_day = today.replace(
+            day=calendar.monthrange(today.year, today.month)[1]
+        )
+
+        # Create the monthly date-range if it does not yet exist.
+        existing = self.env['ir.sequence.date_range'].sudo().search([
+            ('sequence_id', '=', seq.id),
+            ('date_from', '=', first_day),
+        ], limit=1)
+        if not existing:
+            self.env['ir.sequence.date_range'].sudo().create({
+                'sequence_id': seq.id,
+                'date_from': first_day,
+                'date_to': last_day,
+            })
+
+        # next_by_code() will now find the monthly range and use its counter.
+        return self.env['ir.sequence'].next_by_code('crm.lead.booking')
 
     # ── Write override — scoring gate on stage progression ───────────────────
 

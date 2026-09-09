@@ -9,6 +9,8 @@
         # Security first (group definition must precede the CSV)
         'security/gopkz_security.xml',
         'security/ir.model.access.csv',
+        # Sequences
+        'data/ir_sequence_data.xml',
         # Master data (categories before criteria; teams before stages)
         'data/gopkz_vendor_category_data.xml',
         'data/crm_team_data.xml',

@@ -7,13 +7,15 @@
         <field name="arch" type="xml">
 
             <!--
-                Declare is_pipeline_editor right after the lead_info group so
-                the client loads its value for all lead/opportunity types.
-                The field is always invisible — it is only used to gate the
-                readonly attribute on team_id (Pipeline) below.
+                Declare is_pipeline_editor and is_hot_lead_recovery right after
+                the lead_info group so the client loads their values for all
+                lead/opportunity types.
+                Both fields are always invisible — they are only used to gate
+                readonly/invisible attributes on other fields.
             -->
             <xpath expr="//group[@name='lead_info']" position="after">
                 <field name="is_pipeline_editor" invisible="1"/>
+                <field name="is_hot_lead_recovery" invisible="1"/>
             </xpath>
 
             <!--
@@ -29,6 +31,15 @@
                        string="Pipeline"
                        options="{'no_open': True, 'no_create': True}"
                        readonly="not is_pipeline_editor"/>
+                <field name="hlr_customer_type"
+                       string="Customer Type"
+                       invisible="not is_hot_lead_recovery"/>
+                <field name="booking_id" string="Booking ID" readonly="1"/>
+            </xpath>
+
+            <!-- booking_id also in the lead-type right-column group -->
+            <xpath expr="//group[@invisible=&quot;type == 'opportunity'&quot;]/field[@name='team_id']" position="after">
+                <field name="booking_id" string="Booking ID" readonly="1"/>
             </xpath>
 
             <!--
@@ -99,6 +110,20 @@
                     Qualifying in the VO pipeline).
             -->
             <xpath expr="//notebook" position="inside">
+
+                <!-- ── Hot Lead Recovery: Vendor capture ─────────────────── -->
+                <page string="Vendors" name="hlr_vendors"
+                      invisible="not is_hot_lead_recovery">
+                    <field name="hlr_vendor_line_ids">
+                        <list editable="bottom">
+                            <field name="vendor_id" string="Vendor"/>
+                            <field name="vendor_category_id"
+                                   string="Vendor Category"
+                                   readonly="1"/>
+                        </list>
+                    </field>
+                </page>
+
                 <page string="Vendor Scoring" name="vendor_scoring"
                       invisible="not is_vendor_onboarding">
 

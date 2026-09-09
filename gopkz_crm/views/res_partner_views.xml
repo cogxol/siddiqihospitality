@@ -44,6 +44,9 @@
                            string="Settlement Cycle"/>
                     <field name="x_has_api_extranet"
                            string="Has API / Extranet Integration"/>
+                    <field name="hlr_last_booking_date"
+                           string="Last Booking Date"
+                           readonly="1"/>
                 </group>
 
                 <group string="Corporate Account Details"
@@ -60,4 +63,23 @@
 
         </field>
     </record>
+
+    <!-- Partner search view: add hlr_last_booking_date as a searchable field
+         and a quick "Has HLR Booking" filter. -->
+    <record id="view_partner_search_gopkz" model="ir.ui.view">
+        <field name="name">res.partner.search.gopkz</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="base.view_res_partner_filter"/>
+        <field name="arch" type="xml">
+            <xpath expr="//search" position="inside">
+                <field name="hlr_last_booking_date"
+                       string="Last Booking Date"
+                       filter_domain="[('hlr_last_booking_date', '&lt;=', self)]"/>
+                <filter string="Has HLR Booking"
+                        name="filter_hlr_last_booking_date"
+                        domain="[('hlr_last_booking_date', '!=', False)]"/>
+            </xpath>
+        </field>
+    </record>
+
 </odoo>
