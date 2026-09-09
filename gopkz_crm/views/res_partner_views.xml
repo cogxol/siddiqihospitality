@@ -47,6 +47,9 @@
                     <field name="hlr_last_booking_date"
                            string="Last Booking Date"
                            readonly="1"/>
+                    <field name="hlr_total_commission_earned"
+                           string="Total Commission Earned (HLR)"
+                           readonly="1"/>
                 </group>
 
                 <group string="Corporate Account Details"
@@ -57,6 +60,9 @@
                            string="Est. Annual Trips"/>
                     <field name="x_current_travel_provider"
                            string="Current Travel Provider"/>
+                    <field name="hlr_last_corporate_booking_date"
+                           string="Last Corporate Booking Date"
+                           readonly="1"/>
                 </group>
 
             </xpath>
@@ -78,6 +84,12 @@
                 <filter string="Has HLR Booking"
                         name="filter_hlr_last_booking_date"
                         domain="[('hlr_last_booking_date', '!=', False)]"/>
+                <filter string="Has HLR Commission"
+                        name="filter_hlr_total_commission_earned"
+                        domain="[('hlr_total_commission_earned', '&gt;', 0)]"/>
+                <filter string="Has Corporate HLR Booking"
+                        name="filter_hlr_last_corporate_booking_date"
+                        domain="[('hlr_last_corporate_booking_date', '!=', False)]"/>
             </xpath>
         </field>
     </record>

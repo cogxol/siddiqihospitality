@@ -49,13 +49,40 @@ class ResPartner(models.Model):
         string='HLR Vendor Lines',
     )
 
+    # Currency helper: drives the Monetary widget for hlr_total_commission_earned.
+    hlr_currency_id = fields.Many2one(
+        'res.currency',
+        string='HLR Currency',
+        related='company_id.currency_id',
+    )
+
     hlr_last_booking_date = fields.Datetime(
         string='Last Booking Date',
         compute='_compute_hlr_last_booking_date',
         store=True,
         readonly=True,
-        help='Latest date_closed of a won Hot Lead Recovery lead this vendor '
-             'appears on.',
+        help='MAX(date_closed) over Hot Lead Recovery leads where this vendor '
+             'appears and stage_id.is_won = True.',
+    )
+
+    hlr_total_commission_earned = fields.Monetary(
+        string='Total Commission Earned (HLR)',
+        compute='_compute_hlr_total_commission_earned',
+        store=True,
+        readonly=True,
+        currency_field='hlr_currency_id',
+        help='Sum of commission amounts across all won Hot Lead Recovery leads '
+             'this vendor appears on.',
+    )
+
+    # ── Hot Lead Recovery — corporate contact ────────────────────────────────
+    hlr_last_corporate_booking_date = fields.Datetime(
+        string='Last Corporate Booking Date',
+        compute='_compute_hlr_last_corporate_booking_date',
+        store=True,
+        readonly=True,
+        help='MAX(date_closed) of won Hot Lead Recovery leads where this '
+             'contact is the customer and Customer Type = Corporate Reservation.',
     )
 
     # ── Corporate Account Fields ─────────────────────────────────────────────
@@ -82,14 +109,61 @@ class ResPartner(models.Model):
     # ── Compute methods ──────────────────────────────────────────────────────
 
     @api.depends(
+        'opportunity_ids.date_closed',
+        'opportunity_ids.stage_id.is_won',
+        'opportunity_ids.team_id',
+        'opportunity_ids.hlr_customer_type',
+    )
+    def _compute_hlr_last_corporate_booking_date(self):
+        """MAX(date_closed) of won HLR leads where this contact is the customer
+        and hlr_customer_type = 'corporate_reservation'."""
+        hlr_team = self.env.ref(
+            'gopkz_crm.team_hot_lead_recovery', raise_if_not_found=False
+        )
+        for partner in self:
+            if not hlr_team:
+                partner.hlr_last_corporate_booking_date = False
+                continue
+            dates = [
+                lead.date_closed
+                for lead in partner.opportunity_ids
+                if lead.team_id.id == hlr_team.id
+                and lead.stage_id.is_won
+                and lead.hlr_customer_type == 'corporate_reservation'
+                and lead.date_closed
+            ]
+            partner.hlr_last_corporate_booking_date = max(dates) if dates else False
+
+    @api.depends(
+        'hlr_vendor_line_ids.commission_amount',
+        'hlr_vendor_line_ids.lead_id.stage_id.is_won',
+        'hlr_vendor_line_ids.lead_id.team_id',
+    )
+    def _compute_hlr_total_commission_earned(self):
+        """Sum of commission_amount over won HLR leads this vendor appears on."""
+        hlr_team = self.env.ref(
+            'gopkz_crm.team_hot_lead_recovery', raise_if_not_found=False
+        )
+        for partner in self:
+            if not hlr_team:
+                partner.hlr_total_commission_earned = 0.0
+                continue
+            partner.hlr_total_commission_earned = sum(
+                line.commission_amount
+                for line in partner.hlr_vendor_line_ids
+                if line.lead_id.team_id.id == hlr_team.id
+                and line.lead_id.stage_id.is_won
+            )
+
+    @api.depends(
         'hlr_vendor_line_ids.lead_id.date_closed',
         'hlr_vendor_line_ids.lead_id.stage_id.is_won',
         'hlr_vendor_line_ids.lead_id.team_id',
     )
     def _compute_hlr_last_booking_date(self):
-        """Latest date_closed of a won HLR lead this partner appears on as a
-        vendor.  A lead counts as "won" when its stage has is_won=True or when
-        date_closed is already set."""
+        """MAX(lead_id.date_closed) over this vendor's HLR vendor lines where
+        lead_id.team_id is the Hot Lead Recovery team AND
+        lead_id.stage_id.is_won = True."""
         hlr_team = self.env.ref(
             'gopkz_crm.team_hot_lead_recovery', raise_if_not_found=False
         )
@@ -101,7 +175,7 @@ class ResPartner(models.Model):
                 line.lead_id.date_closed
                 for line in partner.hlr_vendor_line_ids
                 if line.lead_id.team_id.id == hlr_team.id
-                and (line.lead_id.stage_id.is_won or line.lead_id.date_closed)
+                and line.lead_id.stage_id.is_won
                 and line.lead_id.date_closed
             ]
             partner.hlr_last_booking_date = max(dates) if dates else False

@@ -76,6 +76,53 @@ class CrmLead(models.Model):
         string='Vendors',
     )
 
+    # ── Hot Lead Recovery trip summary ───────────────────────────────────────
+    hlr_destination_ids = fields.Many2many(
+        'gopkz.destination',
+        relation='crm_lead_hlr_destination_rel',
+        column1='lead_id',
+        column2='destination_id',
+        string='Destinations',
+        compute='_compute_hlr_destinations',
+        store=True,
+        readonly=True,
+    )
+    hlr_travel_date_from = fields.Date(
+        string='Travel From',
+        compute='_compute_hlr_travel_dates',
+        store=True,
+        readonly=True,
+    )
+    hlr_travel_date_to = fields.Date(
+        string='Travel To',
+        compute='_compute_hlr_travel_dates',
+        store=True,
+        readonly=True,
+    )
+
+    # ── Hot Lead Recovery financial totals ───────────────────────────────────
+    hlr_total_vendor_amount = fields.Monetary(
+        string='Total Vendor Amount',
+        compute='_compute_hlr_totals',
+        store=True,
+        readonly=True,
+        currency_field='company_currency',
+    )
+    hlr_total_commission = fields.Monetary(
+        string='Total Commission',
+        compute='_compute_hlr_totals',
+        store=True,
+        readonly=True,
+        currency_field='company_currency',
+    )
+    hlr_total_payable_vendor = fields.Monetary(
+        string='Total Payable to Vendors',
+        compute='_compute_hlr_totals',
+        store=True,
+        readonly=True,
+        currency_field='company_currency',
+    )
+
     # ── Hot Lead Recovery customer type ─────────────────────────────────────
     hlr_customer_type = fields.Selection(
         selection=[
@@ -192,6 +239,31 @@ class CrmLead(models.Model):
                 lead.score_tier = 'D'
             else:
                 lead.score_tier = 'E'
+
+    @api.depends(
+        'hlr_vendor_line_ids.vendor_amount',
+        'hlr_vendor_line_ids.commission_amount',
+        'hlr_vendor_line_ids.payable_vendor_amount',
+    )
+    def _compute_hlr_totals(self):
+        for lead in self:
+            lines = lead.hlr_vendor_line_ids
+            lead.hlr_total_vendor_amount = sum(lines.mapped('vendor_amount'))
+            lead.hlr_total_commission = sum(lines.mapped('commission_amount'))
+            lead.hlr_total_payable_vendor = sum(lines.mapped('payable_vendor_amount'))
+
+    @api.depends('hlr_vendor_line_ids.destination_id')
+    def _compute_hlr_destinations(self):
+        for lead in self:
+            lead.hlr_destination_ids = lead.hlr_vendor_line_ids.mapped('destination_id')
+
+    @api.depends('hlr_vendor_line_ids.service_date_from', 'hlr_vendor_line_ids.service_date_to')
+    def _compute_hlr_travel_dates(self):
+        for lead in self:
+            dates_from = [l.service_date_from for l in lead.hlr_vendor_line_ids if l.service_date_from]
+            dates_to = [l.service_date_to for l in lead.hlr_vendor_line_ids if l.service_date_to]
+            lead.hlr_travel_date_from = min(dates_from) if dates_from else False
+            lead.hlr_travel_date_to = max(dates_to) if dates_to else False
 
     # ── Onchange handlers ────────────────────────────────────────────────────
 

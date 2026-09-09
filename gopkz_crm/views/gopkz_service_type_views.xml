@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="gopkz_service_type_view_list" model="ir.ui.view">
+        <field name="name">gopkz.service.type.view.list</field>
+        <field name="model">gopkz.service.type</field>
+        <field name="arch" type="xml">
+            <list string="Service Types">
+                <field name="name"/>
+                <field name="active"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="gopkz_service_type_view_form" model="ir.ui.view">
+        <field name="name">gopkz.service.type.view.form</field>
+        <field name="model">gopkz.service.type</field>
+        <field name="arch" type="xml">
+            <form string="Service Type">
+                <sheet>
+                    <group>
+                        <field name="name"/>
+                        <field name="active"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_gopkz_service_type" model="ir.actions.act_window">
+        <field name="name">Service Types</field>
+        <field name="res_model">gopkz.service.type</field>
+        <field name="view_mode">list,form</field>
+    </record>
+</odoo>

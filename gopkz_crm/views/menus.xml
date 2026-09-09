@@ -25,4 +25,11 @@
         parent="crm.crm_menu_config"
         action="gopkz_crm.action_gopkz_destination"
         sequence="52"/>
+
+    <menuitem
+        id="menu_gopkz_service_types"
+        name="Service Types"
+        parent="crm.crm_menu_config"
+        action="gopkz_crm.action_gopkz_service_type"
+        sequence="53"/>
 </odoo>
