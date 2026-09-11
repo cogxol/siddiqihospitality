@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!--
+        Add Vendor Categories, Scoring Criteria, and Destinations under CRM's
+        existing Configuration menu (id=crm.crm_menu_config).
+        No new top-level menu item is created.
+    -->
+    <menuitem
+        id="menu_gopkz_vendor_categories"
+        name="Vendor Categories"
+        parent="crm.crm_menu_config"
+        action="gopkz_crm.action_gopkz_vendor_category"
+        sequence="50"/>
+
+    <menuitem
+        id="menu_gopkz_scoring_criteria"
+        name="Scoring Criteria"
+        parent="crm.crm_menu_config"
+        action="gopkz_crm.action_gopkz_scoring_criteria"
+        sequence="51"/>
+
+    <menuitem
+        id="menu_gopkz_destinations"
+        name="Destinations"
+        parent="crm.crm_menu_config"
+        action="gopkz_crm.action_gopkz_destination"
+        sequence="52"/>
+
+    <menuitem
+        id="menu_gopkz_service_types"
+        name="Service Types"
+        parent="crm.crm_menu_config"
+        action="gopkz_crm.action_gopkz_service_type"
+        sequence="53"/>
+</odoo>

@@ -1,0 +1,11 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_gopkz_vendor_category_user,gopkz.vendor.category (user read),model_gopkz_vendor_category,base.group_user,1,0,0,0
+access_gopkz_vendor_category_manager,gopkz.vendor.category (manager full),model_gopkz_vendor_category,gopkz_crm.group_vendor_manager,1,1,1,1
+access_gopkz_destination_user,gopkz.destination (user read),model_gopkz_destination,base.group_user,1,0,0,0
+access_gopkz_destination_manager,gopkz.destination (manager full),model_gopkz_destination,gopkz_crm.group_vendor_manager,1,1,1,1
+access_gopkz_scoring_criteria_user,gopkz.scoring.criteria (user read),model_gopkz_scoring_criteria,base.group_user,1,0,0,0
+access_gopkz_scoring_criteria_manager,gopkz.scoring.criteria (manager full),model_gopkz_scoring_criteria,gopkz_crm.group_vendor_manager,1,1,1,1
+access_gopkz_lead_score_line_user,gopkz.lead.score.line (user full),model_gopkz_lead_score_line,base.group_user,1,1,1,1
+access_gopkz_booking_vendor_line_user,gopkz.booking.vendor.line (user full),model_gopkz_booking_vendor_line,base.group_user,1,1,1,1
+access_gopkz_service_type_user,gopkz.service.type (user read),model_gopkz_service_type,base.group_user,1,0,0,0
+access_gopkz_service_type_manager,gopkz.service.type (manager full),model_gopkz_service_type,gopkz_crm.group_vendor_manager,1,1,1,1

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+    <record id="service_type_accommodation" model="gopkz.service.type">
+        <field name="name">Accommodation</field>
+    </record>
+    <record id="service_type_car_rental" model="gopkz.service.type">
+        <field name="name">Car Rental</field>
+    </record>
+    <record id="service_type_tour" model="gopkz.service.type">
+        <field name="name">Tour</field>
+    </record>
+    <record id="service_type_experience" model="gopkz.service.type">
+        <field name="name">Experience</field>
+    </record>
+    <record id="service_type_flight" model="gopkz.service.type">
+        <field name="name">Flight</field>
+    </record>
+    <record id="service_type_other" model="gopkz.service.type">
+        <field name="name">Other</field>
+    </record>
+</odoo>

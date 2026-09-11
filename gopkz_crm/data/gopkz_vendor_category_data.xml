@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+    <record id="vendor_cat_hotel" model="gopkz.vendor.category">
+        <field name="name">Hotel</field>
+    </record>
+    <record id="vendor_cat_car_rental" model="gopkz.vendor.category">
+        <field name="name">Car Rental</field>
+    </record>
+    <record id="vendor_cat_tour" model="gopkz.vendor.category">
+        <field name="name">Tour</field>
+    </record>
+    <record id="vendor_cat_experience" model="gopkz.vendor.category">
+        <field name="name">Experience</field>
+    </record>
+</odoo>

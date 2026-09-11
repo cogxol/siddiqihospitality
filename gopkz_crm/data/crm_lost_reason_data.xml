@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+    <record id="lost_reason_commission" model="crm.lost.reason">
+        <field name="name">Commission not agreed</field>
+    </record>
+    <record id="lost_reason_rates" model="crm.lost.reason">
+        <field name="name">Rates not competitive</field>
+    </record>
+    <record id="lost_reason_payment_terms" model="crm.lost.reason">
+        <field name="name">Payment / settlement terms</field>
+    </record>
+    <record id="lost_reason_competitor" model="crm.lost.reason">
+        <field name="name">Vendor chose competitor</field>
+    </record>
+    <record id="lost_reason_not_interested" model="crm.lost.reason">
+        <field name="name">Vendor not interested</field>
+    </record>
+    <record id="lost_reason_documentation" model="crm.lost.reason">
+        <field name="name">Documentation issue</field>
+    </record>
+    <record id="lost_reason_technical" model="crm.lost.reason">
+        <field name="name">Technical / integration issue</field>
+    </record>
+    <record id="lost_reason_management" model="crm.lost.reason">
+        <field name="name">Management decision</field>
+    </record>
+    <record id="lost_reason_duplicate" model="crm.lost.reason">
+        <field name="name">Duplicate Vendor</field>
+    </record>
+    <record id="lost_reason_other" model="crm.lost.reason">
+        <field name="name">Other</field>
+    </record>
+</odoo>
