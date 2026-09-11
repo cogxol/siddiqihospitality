@@ -57,6 +57,15 @@ class GopkzLeadScoreLine(models.Model):
         including a deliberate 0.  This is the gate checked by action_confirm_scoring."""
         self.score_entered = True
 
+    def write(self, vals):
+        """Server-side fallback: whenever 'score' is explicitly written
+        (e.g. non-zero values saved via the form), mark the line as entered.
+        This covers cases where the onchange result is not round-tripped by
+        the client (invisible field, same-value write, etc.)."""
+        if 'score' in vals and not vals.get('score_entered'):
+            vals = dict(vals, score_entered=True)
+        return super().write(vals)
+
     @api.constrains('score')
     def _check_score_range(self):
         for line in self:

@@ -7,6 +7,16 @@ from odoo.exceptions import ValidationError
 class ResPartner(models.Model):
     _inherit = 'res.partner'
 
+    # ── Operations Manager ───────────────────────────────────────────────────
+    x_operations_user_id = fields.Many2one(
+        'res.users',
+        string='Operations Manager',
+        domain=[('share', '=', False)],
+        tracking=True,
+        help='Internal user responsible for the day-to-day operational '
+             'relationship with this partner.',
+    )
+
     # ── Vendor Category (controls vendor section visibility) ─────────────────
     vendor_category_id = fields.Many2one(
         'gopkz.vendor.category',
@@ -37,6 +47,18 @@ class ResPartner(models.Model):
     x_has_api_extranet = fields.Boolean(
         string='Has API / Extranet Integration',
         default=False,
+    )
+
+    # ── Vendor Onboarding ────────────────────────────────────────────────────
+
+    vob_latest_lead_stage_id = fields.Many2one(
+        'crm.stage',
+        string='Onboarding Lead Status',
+        compute='_compute_vob_latest_lead_stage_id',
+        store=True,
+        readonly=True,
+        help='Stage of the most recent lead in the Vendor Onboarding pipeline '
+             'where this partner is the contact.',
     )
 
     # ── Hot Lead Recovery ────────────────────────────────────────────────────
@@ -107,6 +129,25 @@ class ResPartner(models.Model):
     )
 
     # ── Compute methods ──────────────────────────────────────────────────────
+
+    @api.depends(
+        'opportunity_ids.stage_id',
+        'opportunity_ids.team_id',
+    )
+    def _compute_vob_latest_lead_stage_id(self):
+        """Stage of the most recently created lead in the Vendor Onboarding
+        pipeline where this partner is the contact."""
+        vo_team = self.env.ref(
+            'gopkz_crm.team_vendor_onboarding', raise_if_not_found=False
+        )
+        for partner in self:
+            if not vo_team:
+                partner.vob_latest_lead_stage_id = False
+                continue
+            leads = partner.opportunity_ids.filtered(
+                lambda l: l.team_id.id == vo_team.id
+            ).sorted('id', reverse=True)
+            partner.vob_latest_lead_stage_id = leads[0].stage_id if leads else False
 
     @api.depends(
         'opportunity_ids.date_closed',

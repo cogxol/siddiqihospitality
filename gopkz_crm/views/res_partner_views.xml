@@ -1,16 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <!--
-        Single inheriting view that adds all three groups to the partner
-        Sales & Purchase tab (per Section 12 — not three separate inheritances).
+        Partner form redesign:
 
-        XPath 1: Adds vendor_category_id and x_is_corporate_account to the
-                 existing "Misc" group on the Sales & Purchase tab.
+        XPath 1 — Main form right column (after Tags / category_id):
+            Add Vendor Category and Corporate Account so they are always
+            visible at the top of the form without having to open a tab.
 
-        XPath 2: Inserts a "Vendor Details" group (visible when
-                 vendor_category_id is set) and a "Corporate Account Details"
-                 group (visible when x_is_corporate_account is True) after
-                 the existing container row.
+        XPath 2 — Notebook: "Vendor Details" tab
+            All vendor-specific fields, visible when vendor_category_id is set.
+
+        XPath 3 — Notebook: "Corporate Account" tab
+            All corporate-account fields, visible when x_is_corporate_account is True.
+
+        Note: vendor_category_id and x_is_corporate_account are intentionally
+        NOT added to the Sales & Purchase → Misc group anymore.
     -->
     <record id="view_partner_form_gopkz" model="ir.ui.view">
         <field name="name">res.partner.form.gopkz</field>
@@ -18,52 +22,81 @@
         <field name="inherit_id" ref="base.view_partner_form"/>
         <field name="arch" type="xml">
 
-            <!-- 1. vendor_category_id and x_is_corporate_account in the
-                    existing Misc group on Sales & Purchase tab -->
-            <xpath expr="//page[@name='sales_purchases']//group[@name='misc']"
-                   position="inside">
-                <field name="vendor_category_id"/>
-                <field name="x_is_corporate_account"/>
+            <!-- 1. Vendor Category and Corporate Account in the main form
+                    right column, immediately after the Tags field. -->
+            <xpath expr="//field[@name='category_id']" position="after">
+                <field name="vendor_category_id" string="Vendor Category"/>
+                <field name="x_is_corporate_account" string="Corporate Account"/>
             </xpath>
 
-            <!-- 2. Vendor Details and Corporate Account Details groups -->
-            <xpath expr="//page[@name='sales_purchases']//group[@name='container_row_2']"
+            <!-- 2. Operations Manager in the Sales & Purchase tab → Sales group,
+                    below the Salesperson field. -->
+            <xpath expr="//page[@name='sales_purchases']//group[@name='sale']/field[@name='user_id']"
                    position="after">
+                <field name="x_operations_user_id"
+                       widget="many2one_avatar_user"
+                       string="Operations Manager"/>
+            </xpath>
 
-                <group string="Vendor Details"
-                       invisible="not vendor_category_id">
-                    <field name="x_destination_ids"
-                           widget="many2many_tags"
-                           string="Destinations"/>
-                    <field name="x_capacity"
-                           string="Inventory / Capacity"
-                           help="Number of rooms, vehicles, or products, depending on vendor type."/>
-                    <field name="x_commission_percentage"
-                           string="Commission %"/>
-                    <field name="x_settlement_cycle"
-                           string="Settlement Cycle"/>
-                    <field name="x_has_api_extranet"
-                           string="Has API / Extranet Integration"/>
-                    <field name="hlr_last_booking_date"
-                           string="Last Booking Date"
-                           readonly="1"/>
-                    <field name="hlr_total_commission_earned"
-                           string="Total Commission Earned (HLR)"
-                           readonly="1"/>
-                </group>
+            <!-- 3. "Vendor Details" notebook tab — only visible when a
+                    Vendor Category is selected. -->
+            <xpath expr="//page[@name='internal_notes']" position="before">
 
-                <group string="Corporate Account Details"
-                       invisible="not x_is_corporate_account">
-                    <field name="x_company_size"
-                           string="Company Size"/>
-                    <field name="x_annual_travel_volume"
-                           string="Est. Annual Trips"/>
-                    <field name="x_current_travel_provider"
-                           string="Current Travel Provider"/>
-                    <field name="hlr_last_corporate_booking_date"
-                           string="Last Corporate Booking Date"
-                           readonly="1"/>
-                </group>
+                <page string="Vendor Details"
+                      name="gopkz_vendor_details"
+                      invisible="not vendor_category_id">
+                    <!-- hlr_currency_id drives the Monetary widget -->
+                    <field name="hlr_currency_id" invisible="1"/>
+                    <group>
+                        <group string="Vendor Configuration">
+                            <field name="x_destination_ids"
+                                   widget="many2many_tags"
+                                   string="Destinations"/>
+                            <field name="x_capacity"
+                                   string="Inventory / Capacity"
+                                   help="Number of rooms, vehicles, or products, depending on vendor type."/>
+                            <field name="x_commission_percentage"
+                                   string="Commission %"/>
+                            <field name="x_settlement_cycle"
+                                   string="Settlement Cycle"/>
+                            <field name="x_has_api_extranet"
+                                   string="Has API / Extranet Integration"/>
+                        </group>
+                        <group string="Performance (HLR)">
+                            <field name="hlr_last_booking_date"
+                                   string="Last Booking Date"
+                                   readonly="1"/>
+                            <field name="hlr_total_commission_earned"
+                                   string="Total Commission Earned"
+                                   readonly="1"/>
+                            <field name="vob_latest_lead_stage_id"
+                                   string="Onboarding Lead Status"
+                                   readonly="1"/>
+                        </group>
+                    </group>
+                </page>
+
+                <!-- 3. "Corporate Account" notebook tab — only visible when
+                        x_is_corporate_account is checked. -->
+                <page string="Corporate Account"
+                      name="gopkz_corporate_account"
+                      invisible="not x_is_corporate_account">
+                    <group>
+                        <group string="Account Details">
+                            <field name="x_company_size"
+                                   string="Company Size"/>
+                            <field name="x_annual_travel_volume"
+                                   string="Est. Annual Trips"/>
+                            <field name="x_current_travel_provider"
+                                   string="Current Travel Provider"/>
+                        </group>
+                        <group string="Performance (HLR)">
+                            <field name="hlr_last_corporate_booking_date"
+                                   string="Last Corporate Booking Date"
+                                   readonly="1"/>
+                        </group>
+                    </group>
+                </page>
 
             </xpath>
 
@@ -71,7 +104,7 @@
     </record>
 
     <!-- Partner search view: add hlr_last_booking_date as a searchable field
-         and a quick "Has HLR Booking" filter. -->
+         and quick filters. -->
     <record id="view_partner_search_gopkz" model="ir.ui.view">
         <field name="name">res.partner.search.gopkz</field>
         <field name="model">res.partner</field>

@@ -17,7 +17,7 @@ class GopkzBookingVendorLine(models.Model):
         'res.partner',
         string='Vendor',
         required=True,
-        domain=[('supplier_rank', '>', 0)],
+        domain=[('vendor_category_id', '!=', False)],
     )
     vendor_category_id = fields.Many2one(
         'gopkz.vendor.category',

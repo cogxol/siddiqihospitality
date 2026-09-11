@@ -204,7 +204,8 @@
                                    digits="[6,2]"
                                    readonly="parent.scoring_locked"/>
                             <field name="score_entered"
-                                   invisible="1"/>
+                                   string="Scored"
+                                   readonly="parent.scoring_locked"/>
                             <field name="weighted_score"
                                    readonly="1"
                                    string="Weighted Score"/>
