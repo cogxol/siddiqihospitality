@@ -48,6 +48,14 @@ class ResPartner(models.Model):
         string='Has API / Extranet Integration',
         default=False,
     )
+    x_vendor_status = fields.Selection(
+        selection=[
+            ('live', 'Live'),
+            ('dormant', 'Dormant'),
+        ],
+        string='Vendor Status',
+        tracking=True,
+    )
 
     # ── Vendor Onboarding ────────────────────────────────────────────────────
 

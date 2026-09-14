@@ -61,6 +61,8 @@
                                    string="Settlement Cycle"/>
                             <field name="x_has_api_extranet"
                                    string="Has API / Extranet Integration"/>
+                            <field name="x_vendor_status"
+                                   string="Vendor Status"/>
                         </group>
                         <group string="Performance (HLR)">
                             <field name="hlr_last_booking_date"
