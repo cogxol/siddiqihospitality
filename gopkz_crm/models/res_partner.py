@@ -141,10 +141,13 @@ class ResPartner(models.Model):
     @api.depends(
         'opportunity_ids.stage_id',
         'opportunity_ids.team_id',
+        'child_ids.opportunity_ids.stage_id',
+        'child_ids.opportunity_ids.team_id',
     )
     def _compute_vob_latest_lead_stage_id(self):
         """Stage of the most recently created lead in the Vendor Onboarding
-        pipeline where this partner is the contact."""
+        pipeline where this partner or any of its child contacts is the lead
+        contact."""
         vo_team = self.env.ref(
             'gopkz_crm.team_vendor_onboarding', raise_if_not_found=False
         )
@@ -152,10 +155,14 @@ class ResPartner(models.Model):
             if not vo_team:
                 partner.vob_latest_lead_stage_id = False
                 continue
-            leads = partner.opportunity_ids.filtered(
-                lambda l: l.team_id.id == vo_team.id
-            ).sorted('id', reverse=True)
-            partner.vob_latest_lead_stage_id = leads[0].stage_id if leads else False
+            # Include leads where the contact is the company itself OR any of
+            # its child contacts (e.g. "Acme Corp, Addison Olson").
+            partner_ids = [partner.id] + partner.child_ids.ids
+            lead = self.env['crm.lead'].search([
+                ('partner_id', 'in', partner_ids),
+                ('team_id', '=', vo_team.id),
+            ], order='id desc', limit=1)
+            partner.vob_latest_lead_stage_id = lead.stage_id if lead else False
 
     @api.depends(
         'opportunity_ids.date_closed',
