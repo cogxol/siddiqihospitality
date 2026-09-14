@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'GOPKZ CRM — Siddiqi Hospitality',
-    'version': '19.0.1.0.0',
+    'version': '19.0.1.0.1',
     'summary': 'Vendor Onboarding, Scoring, Destinations and Corporate Account fields for Siddiqi Hospitality',
     'author': 'COGXOL',
     'depends': ['crm'],
