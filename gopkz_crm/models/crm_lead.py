@@ -24,6 +24,26 @@ class CrmLead(models.Model):
         tracking=True,
     )
 
+    # ── Vendor (parent company of the business contact) ─────────────────────
+    # Auto-filled from partner_id.parent_id whenever partner_id is a Business
+    # (i.e. has a Service Type set).  Visible on every lead where the contact
+    # is a Business contact.
+    x_vendor_id = fields.Many2one(
+        'res.partner',
+        string='Vendor',
+        domain="[('is_company', '=', True), ('vendor_category_id', '=', False)]",
+        tracking=True,
+        help='The parent vendor company of the selected business contact.',
+    )
+
+    # Helper: True when the linked contact is a Business (has a Service Type).
+    # Used in the view to show/hide the Vendor field without a server round-trip.
+    x_partner_is_business = fields.Boolean(
+        related='partner_id.is_business',
+        string='Partner Is Business',
+        store=False,
+    )
+
     # ── Business Channel (related from business contact) ─────────────────────
     x_business_channel = fields.Selection(
         related='partner_id.x_business_channel',
@@ -394,11 +414,12 @@ class CrmLead(models.Model):
         set via context / default_get (where onchange never fires)."""
         records = super().create(vals_list)
         for lead in records:
-            if (lead.partner_id
-                    and lead.partner_id.vendor_category_id
-                    and not lead.vendor_category_id):
-                lead.vendor_category_id = lead.partner_id.vendor_category_id
-                lead._rebuild_score_lines()
+            if lead.partner_id and lead.partner_id.vendor_category_id:
+                if not lead.vendor_category_id:
+                    lead.vendor_category_id = lead.partner_id.vendor_category_id
+                    lead._rebuild_score_lines()
+                if not lead.x_vendor_id and lead.partner_id.parent_id:
+                    lead.x_vendor_id = lead.partner_id.parent_id
         return records
 
     # ── Onchange handlers ────────────────────────────────────────────────────
@@ -413,9 +434,13 @@ class CrmLead(models.Model):
         pipelines so populating these fields elsewhere is harmless.
         """
         if not self.partner_id or not self.partner_id.vendor_category_id:
+            self.x_vendor_id = False
             return
         self.vendor_category_id = self.partner_id.vendor_category_id
         self._rebuild_score_lines()
+        # Auto-fill Vendor from the business contact's parent company.
+        if self.partner_id.parent_id:
+            self.x_vendor_id = self.partner_id.parent_id
         # x_business_channel is a related field on partner_id — it updates
         # automatically when partner_id changes; no explicit assignment needed.
 

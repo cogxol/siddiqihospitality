@@ -11,13 +11,27 @@
                 client has them for every lead type.
             -->
             <xpath expr="//group[@name='lead_info']" position="after">
-                <field name="is_pipeline_editor"    invisible="1"/>
-                <field name="is_hot_lead_recovery"  invisible="1"/>
-                <field name="is_vendor_onboarding"  invisible="1"/>
-                <field name="is_corporate_sales"    invisible="1"/>
-                <field name="x_is_agreement_or_later" invisible="1"/>
-                <field name="x_can_approve"         invisible="1"/>
+                <field name="is_pipeline_editor"       invisible="1"/>
+                <field name="is_hot_lead_recovery"     invisible="1"/>
+                <field name="is_vendor_onboarding"     invisible="1"/>
+                <field name="is_corporate_sales"       invisible="1"/>
+                <field name="x_is_agreement_or_later"  invisible="1"/>
+                <field name="x_can_approve"            invisible="1"/>
                 <field name="x_all_attachments_submitted" invisible="1"/>
+                <field name="x_partner_is_business"    invisible="1"/>
+            </xpath>
+
+            <!--
+                Vendor field — shown below the Contact (partner_id) in the
+                opportunity partner group whenever the contact is a Business
+                (has a Service Type).  Auto-filled from partner_id.parent_id.
+            -->
+            <xpath expr="//group[@name='opportunity_partner']/field[@name='partner_id']"
+                   position="after">
+                <field name="x_vendor_id"
+                       string="Vendor"
+                       invisible="not x_partner_is_business"
+                       options="{'no_create': True, 'no_create_edit': True}"/>
             </xpath>
 
             <!--
