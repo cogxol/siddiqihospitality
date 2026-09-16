@@ -384,17 +384,22 @@ class CrmLead(models.Model):
 
     @api.onchange('partner_id')
     def _onchange_partner_id_fill_vo_fields(self):
-        """In the Vendor Onboarding pipeline, auto-fill Service Type from the
-        linked business contact so the scoring tab is pre-populated."""
-        if not self.partner_id:
+        """Auto-fill Service Type from the linked business contact whenever the
+        contact is set or changed.
+
+        We do NOT gate on team_id here because the user may pick the contact
+        before selecting the pipeline, causing the team check to fail.  The
+        scoring tab is already hidden for non-VO pipelines, so populating
+        vendor_category_id and score_line_ids in other pipelines is harmless.
+
+        We call _onchange_vendor_category_id() explicitly rather than relying
+        on onchange chaining, which is not guaranteed across inheritance.
+        """
+        if not self.partner_id or not self.partner_id.vendor_category_id:
             return
-        vo_team = self.env.ref(
-            'gopkz_crm.team_vendor_onboarding', raise_if_not_found=False
-        )
-        if not vo_team or self.team_id.id != vo_team.id:
-            return
-        if self.partner_id.vendor_category_id:
-            self.vendor_category_id = self.partner_id.vendor_category_id
+        self.vendor_category_id = self.partner_id.vendor_category_id
+        # Rebuild score lines for the new service type immediately.
+        self._onchange_vendor_category_id()
         # x_business_channel is a related field on partner_id — it updates
         # automatically when partner_id changes; no explicit assignment needed.
 
