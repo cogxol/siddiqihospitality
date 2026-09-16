@@ -15,13 +15,14 @@ class CrmLead(models.Model):
         tracking=True,
     )
 
-    # ── Service Type (Vendor Onboarding scoring category) ────────────────────
-    # Renamed from "Vendor Category" → "Service Type" to reflect the new
-    # Vendor → Business structure.
+    # ── Service Type — related from the business contact ────────────────────
+    # Mirrors partner_id.vendor_category_id so it always reflects the
+    # contact's service type without any manual entry.
     vendor_category_id = fields.Many2one(
-        'gopkz.vendor.category',
+        related='partner_id.vendor_category_id',
         string='Service Type',
-        tracking=True,
+        store=False,
+        readonly=True,
     )
 
     # ── Vendor (parent company of the business contact) ─────────────────────
@@ -412,10 +413,10 @@ class CrmLead(models.Model):
         set via context / default_get (where onchange never fires)."""
         records = super().create(vals_list)
         for lead in records:
-            if (lead.partner_id
-                    and lead.partner_id.vendor_category_id
-                    and not lead.vendor_category_id):
-                lead.vendor_category_id = lead.partner_id.vendor_category_id
+            # vendor_category_id is a related field — it already mirrors
+            # partner_id.vendor_category_id automatically.  We only need to
+            # build the score lines if none were provided in vals.
+            if lead.vendor_category_id and not lead.score_line_ids:
                 lead._rebuild_score_lines()
         return records
 
@@ -432,16 +433,10 @@ class CrmLead(models.Model):
         """
         if not self.partner_id or not self.partner_id.vendor_category_id:
             return
-        self.vendor_category_id = self.partner_id.vendor_category_id
+        # vendor_category_id is now a related field — it updates automatically.
+        # Rebuild score lines explicitly since onchange chaining is not guaranteed.
         self._rebuild_score_lines()
-        # x_vendor_id is a related field (partner_id.parent_id) — updates automatically.
-        # x_business_channel is a related field on partner_id — it updates
-        # automatically when partner_id changes; no explicit assignment needed.
-
-    @api.onchange('vendor_category_id')
-    def _onchange_vendor_category_id(self):
-        """Rebuild score lines whenever the Service Type changes manually."""
-        self._rebuild_score_lines()
+        # x_vendor_id and x_business_channel are related fields — auto-update.
 
     # ── Helpers ──────────────────────────────────────────────────────────────
 
