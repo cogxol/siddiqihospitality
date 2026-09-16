@@ -11,7 +11,7 @@ class GopkzScoringCriteria(models.Model):
     name = fields.Char(string='Criterion Name', required=True)
     category_id = fields.Many2one(
         'gopkz.vendor.category',
-        string='Vendor Category',
+        string='Service Type',
         required=True,
         ondelete='restrict',
     )

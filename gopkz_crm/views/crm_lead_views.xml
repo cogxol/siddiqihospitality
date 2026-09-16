@@ -7,24 +7,36 @@
         <field name="arch" type="xml">
 
             <!--
-                Declare is_pipeline_editor and is_hot_lead_recovery right after
-                the lead_info group so the client loads their values for all
-                lead/opportunity types.
-                Both fields are always invisible — they are only used to gate
-                readonly/invisible attributes on other fields.
+                Load all pipeline-gate helpers right after lead_info so the
+                client has them for every lead type.
             -->
             <xpath expr="//group[@name='lead_info']" position="after">
-                <field name="is_pipeline_editor" invisible="1"/>
-                <field name="is_hot_lead_recovery" invisible="1"/>
+                <field name="is_pipeline_editor"       invisible="1"/>
+                <field name="is_hot_lead_recovery"     invisible="1"/>
+                <field name="is_vendor_onboarding"     invisible="1"/>
+                <field name="is_corporate_sales"       invisible="1"/>
+                <field name="x_is_agreement_or_later"  invisible="1"/>
+                <field name="x_can_approve"            invisible="1"/>
+                <field name="x_all_attachments_submitted" invisible="1"/>
+                <field name="x_partner_is_business"    invisible="1"/>
             </xpath>
 
             <!--
-                Add "Pipeline" (team_id) to the OPPORTUNITY right-column group.
-                The standard form has team_id in the Contacts tab for
-                opportunities, which is not visible on first open.
-                This adds a prominently placed read (for all) / write (admin)
-                copy in the main info area.
-                readonly="not is_pipeline_editor" → editable only by sysadmin.
+                Vendor field — shown below the Contact (partner_id) in the
+                opportunity partner group whenever the contact is a Business
+                (has a Service Type).  Auto-filled from partner_id.parent_id.
+            -->
+            <xpath expr="//group[@name='opportunity_partner']/field[@name='partner_id']"
+                   position="after">
+                <field name="x_vendor_id"
+                       string="Vendor"
+                       invisible="not x_partner_is_business"
+                       options="{'no_create': True, 'no_create_edit': True}"/>
+            </xpath>
+
+            <!--
+                Add Pipeline (team_id), Customer Type, Booking ID, Destinations
+                and travel dates to the opportunity right-column group.
             -->
             <xpath expr="//group[@invisible=&quot;type == 'lead'&quot;]/field[@name='tag_ids']" position="after">
                 <field name="team_id"
@@ -34,7 +46,14 @@
                 <field name="hlr_customer_type"
                        string="Customer Type"
                        invisible="not is_hot_lead_recovery"/>
-                <field name="booking_id" string="Booking ID" readonly="1"/>
+                <field name="x_payment_status"
+                       string="Payment Status"
+                       invisible="not is_hot_lead_recovery"/>
+                <field name="x_business_channel"
+                       string="Business Channel"
+                       invisible="not is_vendor_onboarding"/>
+                <field name="booking_id" string="Booking ID" readonly="1"
+                       invisible="not is_hot_lead_recovery"/>
                 <field name="hlr_destination_ids"
                        string="Destinations"
                        widget="many2many_tags"
@@ -50,49 +69,39 @@
                        invisible="not is_hot_lead_recovery"/>
             </xpath>
 
-            <!-- booking_id also in the lead-type right-column group -->
+            <!-- booking_id in the lead-type right-column group: HLR only -->
             <xpath expr="//group[@invisible=&quot;type == 'opportunity'&quot;]/field[@name='team_id']" position="after">
-                <field name="booking_id" string="Booking ID" readonly="1"/>
+                <field name="booking_id" string="Booking ID" readonly="1"
+                       invisible="not is_hot_lead_recovery"/>
             </xpath>
 
-            <!--
-                Relabel and restrict the team_id that is in the LEAD right-
-                column group (visible when type == 'lead').
-            -->
+            <!-- Relabel and restrict team_id in the LEAD right-column group -->
             <xpath expr="//group[@invisible=&quot;type == 'opportunity'&quot;]/field[@name='team_id']" position="attributes">
                 <attribute name="string">Pipeline</attribute>
                 <attribute name="readonly">not is_pipeline_editor</attribute>
             </xpath>
 
-            <!--
-                The Contacts tab → Ownership group also shows team_id.
-                Mark it always readonly there: the right-column field above
-                is the single authoritative edit point for admins; this copy
-                is purely informational.
-            -->
+            <!-- Contacts tab → Ownership group: team_id read-only -->
             <xpath expr="//group[@name='Misc']/field[@name='team_id']" position="attributes">
                 <attribute name="string">Pipeline</attribute>
                 <attribute name="readonly">1</attribute>
             </xpath>
 
             <!--
-                Make lost_reason_id read-only once the lead is lost.
-                won_status == 'lost' means active=False (archived by Mark Lost).
-                After restore, won_status returns to 'pending' so the field
-                becomes editable again (and Odoo also clears lost_reason_id
-                on restore, so it's invisible anyway).
+                Hide Expected Revenue for Vendor Onboarding and Corporate Sales
+                pipelines — these are process pipelines, not sales pipelines.
+                We target the containing div (which is already invisible for leads).
             -->
+            <xpath expr="//div[@invisible=&quot;type == 'lead'&quot;][.//field[@name='expected_revenue']]" position="attributes">
+                <attribute name="invisible">type == 'lead' or is_vendor_onboarding or is_corporate_sales</attribute>
+            </xpath>
+
+            <!-- lost_reason_id: read-only once lost -->
             <xpath expr="//field[@name='lost_reason_id']" position="attributes">
                 <attribute name="readonly">won_status == 'lost'</attribute>
             </xpath>
 
-            <!--
-                Show x_lost_reason_detail only when:
-                  - The lead is lost (won_status == 'lost')
-                  - The reason is specifically "Other" (x_is_lost_other)
-                x_is_lost_other is a non-stored computed Boolean on crm.lead
-                that checks lost_reason_id against gopkz_crm.lost_reason_other.
-            -->
+            <!-- Other Reason Detail: show only when lost + Other reason -->
             <xpath expr="//field[@name='lost_reason_id']" position="after">
                 <field name="x_is_lost_other" invisible="1"/>
                 <field name="x_lost_reason_detail"
@@ -101,40 +110,20 @@
                        invisible="won_status != 'lost' or not x_is_lost_other"/>
             </xpath>
 
-            <!--
-                Add a "Vendor Scoring" page to the lead form notebook.
-                The page is only visible when the lead belongs to the
-                Vendor Onboarding team (is_vendor_onboarding = True).
-
-                is_vendor_onboarding and scoring_locked are non-stored
-                computed fields; both must be present in the view (even if
-                invisible) so the client loads and re-evaluates them on
-                field changes.
-
-                scoring_locked becomes True once the lead has advanced past
-                Qualifying — at that point the Score column becomes readonly
-                (parent.scoring_locked) and Confirm Scoring is hidden.
-
-                score_line_ids:
-                  - create="0" delete="0" on BOTH the outer <field> and the
-                    inner <list> per Section 12 of the spec.
-                  - criteria_id carries force_save="1" per Section 0.1.
-                  - score is readonly when parent.scoring_locked (past
-                    Qualifying in the VO pipeline).
-            -->
+            <!-- ── Notebook pages ─────────────────────────────────────────── -->
             <xpath expr="//notebook" position="inside">
 
-                <!-- ── Hot Lead Recovery: Vendor capture ─────────────────── -->
+                <!-- ── Hot Lead Recovery: Business / Vendor capture ──────── -->
                 <page string="Vendors" name="hlr_vendors"
                       invisible="not is_hot_lead_recovery">
                     <field name="hlr_vendor_line_ids">
                         <list editable="bottom">
                             <field name="currency_id" column_invisible="1"/>
-                            <field name="vendor_id" string="Vendor"/>
+                            <field name="vendor_parent_id" string="Vendor" readonly="1"/>
+                            <field name="vendor_id" string="Business"/>
                             <field name="vendor_category_id"
-                                   string="Vendor Category"
+                                   string="Service Type"
                                    readonly="1"/>
-                            <field name="service_type_id" string="Service Type"/>
                             <field name="destination_id" string="Destination"/>
                             <field name="service_date_from" string="Check-in / Travel Date"/>
                             <field name="service_date_to" string="Check-out / Return Date"/>
@@ -161,16 +150,100 @@
                     </group>
                 </page>
 
+                <!-- ── Hot Lead Recovery: Refund Policy ──────────────────── -->
+                <page string="Refund Policy" name="hlr_refund_policy"
+                      invisible="not is_hot_lead_recovery">
+                    <field name="x_refund_policy" nolabel="1"/>
+                </page>
+
+                <!-- ── Vendor Onboarding: Agreement Attachments ──────────── -->
+                <!--
+                    Visible from the Agreement stage onward (x_is_agreement_or_later).
+                    Each attachment section has:
+                      • A URL field (hyperlink)
+                      • A Submit button — hidden until a URL is entered, hidden after
+                        submission
+                      • A "Submitted" badge shown after submission
+                    Once all three are submitted the Approve button appears for the
+                    Operations Manager.
+                -->
+                <page string="Attachments" name="gopkz_attachments"
+                      invisible="not x_is_agreement_or_later">
+
+                    <group string="Signed Agreement">
+                        <field name="x_attachment_agreement_url"
+                               string="Hyperlink"
+                               readonly="x_attachment_agreement_submitted"
+                               placeholder="https://…"/>
+                        <field name="x_attachment_agreement_submitted"
+                               string="Submitted"
+                               readonly="1"
+                               invisible="not x_attachment_agreement_submitted"/>
+                        <button name="action_submit_agreement"
+                                type="object"
+                                string="Submit"
+                                class="btn-primary"
+                                invisible="not x_attachment_agreement_url or x_attachment_agreement_submitted"/>
+                    </group>
+
+                    <group string="Pictures">
+                        <field name="x_attachment_pictures_url"
+                               string="Hyperlink"
+                               readonly="x_attachment_pictures_submitted"
+                               placeholder="https://…"/>
+                        <field name="x_attachment_pictures_submitted"
+                               string="Submitted"
+                               readonly="1"
+                               invisible="not x_attachment_pictures_submitted"/>
+                        <button name="action_submit_pictures"
+                                type="object"
+                                string="Submit"
+                                class="btn-primary"
+                                invisible="not x_attachment_pictures_url or x_attachment_pictures_submitted"/>
+                    </group>
+
+                    <group string="Other Documentation">
+                        <field name="x_attachment_other_url"
+                               string="Hyperlink"
+                               readonly="x_attachment_other_submitted"
+                               placeholder="https://…"/>
+                        <field name="x_attachment_other_submitted"
+                               string="Submitted"
+                               readonly="1"
+                               invisible="not x_attachment_other_submitted"/>
+                        <button name="action_submit_other"
+                                type="object"
+                                string="Submit"
+                                class="btn-primary"
+                                invisible="not x_attachment_other_url or x_attachment_other_submitted"/>
+                    </group>
+
+                    <group invisible="not x_all_attachments_submitted">
+                        <group string="Approval">
+                            <field name="x_agreement_approved"
+                                   string="Agreement Approved"
+                                   readonly="1"/>
+                            <button name="action_approve_agreement"
+                                    type="object"
+                                    string="Approve &amp; Advance to Onboarding"
+                                    class="btn-success"
+                                    invisible="x_agreement_approved or not x_can_approve"/>
+                            <field name="x_can_approve" invisible="1"/>
+                        </group>
+                    </group>
+
+                </page>
+
+                <!-- ── Vendor Onboarding: Vendor Scoring ─────────────────── -->
                 <page string="Vendor Scoring" name="vendor_scoring"
                       invisible="not is_vendor_onboarding">
 
-                    <!-- Non-stored helpers loaded by the client. -->
-                    <field name="is_vendor_onboarding" invisible="1"/>
                     <field name="scoring_locked" invisible="1"/>
 
                     <group>
-                        <group string="Category &amp; Score">
+                        <group string="Service Type &amp; Score">
                             <field name="vendor_category_id"
+                                   string="Service Type"
                                    readonly="scoring_locked"/>
                             <field name="total_score" readonly="1"/>
                             <field name="score_tier" readonly="1"/>
@@ -218,7 +291,7 @@
         </field>
     </record>
 
-    <!-- HLR travel-date filters on the standard lead/opportunity search view -->
+    <!-- Lead / opportunity search view: HLR travel-date filters -->
     <record id="crm_lead_view_search_gopkz" model="ir.ui.view">
         <field name="name">crm.lead.view.search.gopkz</field>
         <field name="model">crm.lead</field>

@@ -3,18 +3,23 @@
     <!--
         Partner form redesign:
 
-        XPath 1 — Main form right column (after Tags / category_id):
-            Add Vendor Category and Corporate Account so they are always
-            visible at the top of the form without having to open a tab.
+        XPath 1 — Smart button area: add "Businesses (N)" button, visible on
+            vendor contacts that have child business contacts.
 
-        XPath 2 — Notebook: "Vendor Details" tab
-            All vendor-specific fields, visible when vendor_category_id is set.
+        XPath 2 — Main form right column (after Tags / category_id):
+            Add Service Type (vendor_category_id) and Corporate Account so they
+            are always visible at the top of the form.
+            Setting a Service Type on a contact identifies it as a Business and
+            makes the Vendor Details tab appear.
 
-        XPath 3 — Notebook: "Corporate Account" tab
-            All corporate-account fields, visible when x_is_corporate_account is True.
+        XPath 3 — Sales & Purchase tab: Operations Manager.
 
-        Note: vendor_category_id and x_is_corporate_account are intentionally
-        NOT added to the Sales & Purchase → Misc group anymore.
+        XPath 4 — Notebook: "Vendor Details" tab
+            Visible when vendor_category_id is set (= this is a Business contact).
+            All business-specific fields live here.
+
+        XPath 5 — Notebook: "Corporate Account" tab
+            Visible when x_is_corporate_account is True.
     -->
     <record id="view_partner_form_gopkz" model="ir.ui.view">
         <field name="name">res.partner.form.gopkz</field>
@@ -22,14 +27,165 @@
         <field name="inherit_id" ref="base.view_partner_form"/>
         <field name="arch" type="xml">
 
-            <!-- 1. Vendor Category and Corporate Account in the main form
-                    right column, immediately after the Tags field. -->
+            <!-- 1. Smart button: Businesses count (visible on vendor/parent contacts). -->
+            <xpath expr="//div[@name='button_box']" position="inside">
+                <field name="x_vendor_business_count" invisible="1"/>
+                <button class="oe_stat_button"
+                        type="object"
+                        name="action_view_businesses"
+                        icon="fa-building"
+                        invisible="x_vendor_business_count == 0">
+                    <field name="x_vendor_business_count"
+                           widget="statinfo"
+                           string="Businesses"/>
+                </button>
+            </xpath>
+
+            <!--
+                6. Replace child_ids (standard Contacts tab) with x_employee_ids
+                   so that Business contacts (those with a Service Type set)
+                   are NOT shown in the standard Contacts tab.
+
+                   x_employee_ids is a Python One2many with domain
+                   [('vendor_category_id', '=', False)] so only ordinary contacts
+                   and addresses appear here.
+
+                   The kanban template is copied verbatim from the standard
+                   res_partner_views.xml so the look and feel is identical.
+            -->
+            <xpath expr="//page[@name='contact_addresses']/field[@name='child_ids']"
+                   position="replace">
+                <field name="x_employee_ids"
+                       mode="kanban"
+                       context="{'default_parent_id': id, 'default_street': street, 'default_street2': street2, 'default_city': city, 'default_state_id': state_id, 'default_zip': zip, 'default_country_id': country_id, 'default_lang': lang, 'default_user_id': user_id, 'default_type': is_company and 'contact' or 'other'}">
+                    <kanban color="color">
+                        <field name="color"/>
+                        <field name="type"/>
+                        <field name="is_company"/>
+                        <templates>
+                            <t t-name="card" class="flex-row">
+                                <aside class="o_kanban_aside_full">
+                                    <field name="avatar_128" class="o_kanban_image_fill w-100" widget="image" options="{'img_class': 'object-fit-cover'}" alt="Contact image" invisible="type != 'contact'"/>
+                                    <field name="avatar_128" class="o_kanban_image_fill w-100" widget="image" options="{'img_class': 'object-fit-contain p-2'}" alt="Contact image" invisible="type == 'contact'"/>
+                                </aside>
+                                <main class="ps-2 ps-md-0">
+                                    <field name="name" invisible="not name" class="fw-bold"/>
+                                    <field name="type" invisible="name" class="fw-bold"/>
+                                    <div t-if="record.email.raw_value" class="text-truncate">
+                                        <i class="fa fa-fw me-1 fa-envelope text-primary" title="Email"/>
+                                        <field name="email"/>
+                                    </div>
+                                    <div t-if="record.phone.raw_value">
+                                        <i class="fa fa-fw me-1 fa-phone text-primary" title="Phone"/>
+                                        <field name="phone"/>
+                                    </div>
+                                    <div invisible="not function or is_company">
+                                        <i class="fa fa-fw me-1 fa-suitcase text-primary" title="Position"/>
+                                        <field name="function"/>
+                                    </div>
+                                    <div t-if="record.type.raw_value != 'contact' and (record.city.raw_value or record.country_id.raw_value)">
+                                        <i class="fa fa-fw me-1 fa-map-marker text-primary" title="Location"/>
+                                        <field name="city"/>
+                                        <span t-if="record.city.raw_value and record.country_id.raw_value">, </span>
+                                        <field name="country_id"/>
+                                    </div>
+                                </main>
+                            </t>
+                        </templates>
+                    </kanban>
+                    <form string="Contact / Address">
+                        <sheet>
+                            <field name="type" required="1" widget="radio" options="{'horizontal': true}"/>
+                            <div class="d-flex align-items-center gap-3">
+                                <field name="image_1920" widget="contact_image" nolabel="1" options="{'preview_image': 'avatar_128', 'size': [100,100], 'img_class': 'rounded border'}"/>
+                                <div class="flex-grow-1">
+                                    <h3>
+                                        <field name="name" class="d-block" string="Name" default_focus="1" required="type == 'contact'" placeholder="e.g. Brandon Freeman"/>
+                                    </h3>
+                                    <div class="row flex-row">
+                                        <div class="d-flex align-items-baseline">
+                                            <i class="fa fa-fw me-1 fa-envelope text-primary" title="Email"/>
+                                            <field name="email" widget="email" class="w-100" context="{'gravatar_image': True}" required="user_ids" placeholder="Email"/>
+                                        </div>
+                                        <div class="d-flex align-items-baseline">
+                                            <i class="fa fa-fw me-1 fa-phone text-primary" title="Phone"/>
+                                            <field name="phone" widget="phone" class="w-100" placeholder="Phone"/>
+                                        </div>
+                                        <div invisible="is_company or type != 'contact'" class="d-flex align-items-baseline">
+                                            <i class="fa fa-fw me-1 fa-suitcase text-primary" title="Position"/>
+                                            <field name="function" placeholder="Job title"/>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <group invisible="type == 'contact'" name="other_info">
+                                <group>
+                                    <span class="o_form_label o_td_label o_address_type">
+                                        <field name="type_address_label" readonly="1" class="fw-bold"/>
+                                    </span>
+                                    <div class="o_address_format" name="div_address">
+                                        <field name="street" placeholder="Street..." class="o_address_street"/>
+                                        <field name="street2" placeholder="Street 2..." class="o_address_street"/>
+                                        <field name="city" placeholder="City" class="o_address_city"/>
+                                        <field name="state_id" class="o_address_state" placeholder="State" options="{'no_open': True, 'no_quick_create': True}" context="{'country_id': country_id, 'default_country_id': country_id, 'zip': zip}"/>
+                                        <field name="zip" placeholder="ZIP" class="o_address_zip"/>
+                                        <field name="country_id" placeholder="Country" class="o_address_country" options='{"no_open": True, "no_create": True}'/>
+                                    </div>
+                                </group>
+                            </group>
+                            <group>
+                                <field name="company_id" invisible="1"/>
+                                <label for="comment"/>
+                                <field name="comment" options="{'height': 100}" placeholder="Internal notes..." nolabel="1"/>
+                            </group>
+                            <field name="lang" invisible="True"/>
+                        </sheet>
+                    </form>
+                </field>
+            </xpath>
+
+            <!--
+                7. Businesses tab — appears right after the Contacts tab.
+                   Only visible when x_vendor_business_count > 0 (i.e. this is a
+                   vendor company that has at least one child Business contact).
+
+                   Uses x_business_ids (domain: vendor_category_id != False) so
+                   only Business contacts appear here, not ordinary addresses.
+            -->
+            <xpath expr="//page[@name='contact_addresses']" position="after">
+                <page string="Businesses"
+                      name="gopkz_businesses"
+                      invisible="x_vendor_business_count == 0">
+                    <field name="x_business_ids"
+                           context="{'default_parent_id': id, 'default_x_is_vendor_business': True}">
+                        <list string="Businesses">
+                            <field name="name" string="Business Name"/>
+                            <field name="vendor_category_id" string="Service Type" readonly="1"/>
+                            <field name="x_business_channel" string="Business Channel"/>
+                            <field name="x_commission_percentage" string="Commission %"/>
+                            <field name="vob_latest_lead_stage_id" string="Onboarding Status" readonly="1"/>
+                        </list>
+                    </field>
+                </page>
+            </xpath>
+
+            <!-- 2. Service Type, Vendor (parent company) and Corporate Account in
+                    the main form right column, immediately after the Tags field.
+                    Setting Service Type here identifies the contact as a Business
+                    and reveals the Vendor Details tab.
+                    The Vendor field (parent_id) only appears when Service Type is
+                    set so the user can link the Business to its parent vendor. -->
             <xpath expr="//field[@name='category_id']" position="after">
-                <field name="vendor_category_id" string="Vendor Category"/>
+                <field name="vendor_category_id" invisible="not is_company"/>
+                <field name="parent_id"
+                       string="Vendor"
+                       invisible="not vendor_category_id"
+                       domain="[('is_company', '=', True), ('vendor_category_id', '=', False)]"
+                       options="{'no_create_edit': True}"/>
                 <field name="x_is_corporate_account" string="Corporate Account"/>
             </xpath>
 
-            <!-- 2. Operations Manager in the Sales & Purchase tab → Sales group,
+            <!-- 3. Operations Manager in the Sales & Purchase tab → Sales group,
                     below the Salesperson field. -->
             <xpath expr="//page[@name='sales_purchases']//group[@name='sale']/field[@name='user_id']"
                    position="after">
@@ -38,8 +194,8 @@
                        string="Operations Manager"/>
             </xpath>
 
-            <!-- 3. "Vendor Details" notebook tab — only visible when a
-                    Vendor Category is selected. -->
+            <!-- 4. "Vendor Details" notebook tab — only visible when a Service Type
+                    is selected (i.e. this is a Business contact). -->
             <xpath expr="//page[@name='internal_notes']" position="before">
 
                 <page string="Vendor Details"
@@ -47,6 +203,7 @@
                       invisible="not vendor_category_id">
                     <!-- hlr_currency_id drives the Monetary widget -->
                     <field name="hlr_currency_id" invisible="1"/>
+                    <field name="is_business" invisible="1"/>
                     <group>
                         <group string="Vendor Configuration">
                             <field name="x_destination_ids"
@@ -54,7 +211,7 @@
                                    string="Destinations"/>
                             <field name="x_capacity"
                                    string="Inventory / Capacity"
-                                   help="Number of rooms, vehicles, or products, depending on vendor type."/>
+                                   help="Number of rooms, vehicles, or products."/>
                             <field name="x_commission_percentage"
                                    string="Commission %"/>
                             <field name="x_settlement_cycle"
@@ -62,7 +219,10 @@
                             <field name="x_has_api_extranet"
                                    string="Has API / Extranet Integration"/>
                             <field name="x_vendor_status"
-                                   string="Vendor Status"/>
+                                   string="Business Status"
+                                   readonly="1"/>
+                            <field name="x_business_channel"
+                                   string="Business Channel"/>
                         </group>
                         <group string="Performance (HLR)">
                             <field name="hlr_last_booking_date"
@@ -78,7 +238,7 @@
                     </group>
                 </page>
 
-                <!-- 3. "Corporate Account" notebook tab — only visible when
+                <!-- 5. "Corporate Account" notebook tab — only visible when
                         x_is_corporate_account is checked. -->
                 <page string="Corporate Account"
                       name="gopkz_corporate_account"
@@ -105,8 +265,7 @@
         </field>
     </record>
 
-    <!-- Partner search view: add hlr_last_booking_date as a searchable field
-         and quick filters. -->
+    <!-- Partner search view: HLR booking date filters. -->
     <record id="view_partner_search_gopkz" model="ir.ui.view">
         <field name="name">res.partner.search.gopkz</field>
         <field name="model">res.partner</field>
@@ -125,6 +284,9 @@
                 <filter string="Has Corporate HLR Booking"
                         name="filter_hlr_last_corporate_booking_date"
                         domain="[('hlr_last_corporate_booking_date', '!=', False)]"/>
+                <filter string="Is Business"
+                        name="filter_is_business"
+                        domain="[('vendor_category_id', '!=', False)]"/>
             </xpath>
         </field>
     </record>

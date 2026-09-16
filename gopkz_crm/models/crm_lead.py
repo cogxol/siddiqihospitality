@@ -15,11 +15,43 @@ class CrmLead(models.Model):
         tracking=True,
     )
 
-    # ── Vendor Category ──────────────────────────────────────────────────────
+    # ── Service Type ─────────────────────────────────────────────────────────
+    # Related field — always mirrors partner_id.vendor_category_id so it
+    # auto-fills from the business contact.  readonly=False lets the user
+    # override it on the lead without changing the contact record.
+    # _onchange_vendor_category_id rebuilds the scoring criteria whenever it
+    # changes (whether via contact selection or a manual override).
     vendor_category_id = fields.Many2one(
-        'gopkz.vendor.category',
-        string='Vendor Category',
-        tracking=True,
+        related='partner_id.vendor_category_id',
+        string='Service Type',
+        store=False,
+        readonly=False,
+    )
+
+    # ── Vendor (parent company of the business contact) ─────────────────────
+    # Related field: always mirrors partner_id.parent_id.
+    # Visible on every lead where the contact is a Business contact.
+    x_vendor_id = fields.Many2one(
+        related='partner_id.parent_id',
+        string='Vendor',
+        store=False,
+        readonly=True,
+    )
+
+    # Helper: True when the linked contact is a Business (has a Service Type).
+    # Used in the view to show/hide the Vendor field without a server round-trip.
+    x_partner_is_business = fields.Boolean(
+        related='partner_id.is_business',
+        string='Partner Is Business',
+        store=False,
+    )
+
+    # ── Business Channel (related from business contact) ─────────────────────
+    x_business_channel = fields.Selection(
+        related='partner_id.x_business_channel',
+        string='Business Channel',
+        store=False,
+        readonly=False,
     )
 
     # ── Scoring lines ────────────────────────────────────────────────────────
@@ -49,21 +81,58 @@ class CrmLead(models.Model):
         store=True,
     )
 
-    # ── Gate flag ────────────────────────────────────────────────────────────
+    # ── Gate flags ───────────────────────────────────────────────────────────
     scoring_confirmed = fields.Boolean(
         string='Scoring Confirmed',
         default=False,
         store=True,
     )
+    x_agreement_approved = fields.Boolean(
+        string='Agreement Approved',
+        default=False,
+        store=True,
+        tracking=True,
+    )
+
+    # ── Attachment fields (Agreement stage and later) ────────────────────────
+    x_attachment_agreement_url = fields.Char(
+        string='Signed Agreement',
+        help='Hyperlink to the signed agreement document.',
+    )
+    x_attachment_pictures_url = fields.Char(
+        string='Pictures',
+        help='Hyperlink to property/business pictures.',
+    )
+    x_attachment_other_url = fields.Char(
+        string='Other Documentation',
+        help='Hyperlink to any other supporting documentation.',
+    )
+    x_attachment_agreement_submitted = fields.Boolean(
+        string='Agreement Submitted',
+        default=False,
+        store=True,
+    )
+    x_attachment_pictures_submitted = fields.Boolean(
+        string='Pictures Submitted',
+        default=False,
+        store=True,
+    )
+    x_attachment_other_submitted = fields.Boolean(
+        string='Other Docs Submitted',
+        default=False,
+        store=True,
+    )
+    x_all_attachments_submitted = fields.Boolean(
+        string='All Documents Submitted',
+        compute='_compute_x_all_attachments_submitted',
+        store=False,
+    )
 
     # ── Lost reason "Other" detail ───────────────────────────────────────────
     x_lost_reason_detail = fields.Char(
         string='Other Reason Detail',
-        help='Manual reason text entered when "Other" is selected as the lost reason.',
+        help='Manual reason text when "Other" is selected as the lost reason.',
     )
-    # Non-stored helper: True when lost_reason_id is our "Other" record.
-    # Used in the view to toggle x_lost_reason_detail visibility without
-    # relying on ref() in XML expressions (which isn't supported there).
     x_is_lost_other = fields.Boolean(
         compute='_compute_x_is_lost_other',
         store=False,
@@ -123,7 +192,7 @@ class CrmLead(models.Model):
         currency_field='company_currency',
     )
 
-    # ── Hot Lead Recovery customer type ─────────────────────────────────────
+    # ── Hot Lead Recovery customer type & payment status ─────────────────────
     hlr_customer_type = fields.Selection(
         selection=[
             ('corporate_reservation', 'Corporate Reservation'),
@@ -132,6 +201,21 @@ class CrmLead(models.Model):
         string='Customer Type',
         tracking=True,
     )
+    x_payment_status = fields.Selection(
+        selection=[
+            ('pending', 'Pending'),
+            ('partial', 'Partially Paid'),
+            ('paid', 'Paid'),
+            ('refunded', 'Refunded'),
+        ],
+        string='Payment Status',
+        tracking=True,
+    )
+
+    # ── Refund Policy ────────────────────────────────────────────────────────
+    x_refund_policy = fields.Html(
+        string='Refund Policy',
+    )
 
     # ── UI helpers (non-stored) ──────────────────────────────────────────────
     is_vendor_onboarding = fields.Boolean(
@@ -139,25 +223,31 @@ class CrmLead(models.Model):
         compute='_compute_is_vendor_onboarding',
         store=False,
     )
-
     is_hot_lead_recovery = fields.Boolean(
         string='Is Hot Lead Recovery Team',
         compute='_compute_is_hot_lead_recovery',
         store=False,
     )
-
-    # True when the lead is on the Vendor Onboarding team AND past Qualifying.
-    # When True the score lines become read-only and Confirm Scoring is hidden.
+    is_corporate_sales = fields.Boolean(
+        string='Is Corporate Sales Team',
+        compute='_compute_is_corporate_sales',
+        store=False,
+    )
+    x_is_agreement_or_later = fields.Boolean(
+        string='Is Agreement Stage or Later',
+        compute='_compute_x_is_agreement_or_later',
+        store=False,
+    )
+    x_can_approve = fields.Boolean(
+        string='Can Approve',
+        compute='_compute_x_can_approve',
+        store=False,
+    )
     scoring_locked = fields.Boolean(
         string='Scoring Locked',
         compute='_compute_scoring_locked',
         store=False,
     )
-
-    # True only for Odoo System Administrators.
-    # Drives readonly="not is_pipeline_editor" on the team_id (Pipeline) field
-    # so that ordinary users can see the pipeline but cannot reassign it.
-    # @api.depends_context('uid') caches the result per user, not per record.
     is_pipeline_editor = fields.Boolean(
         string='Can Edit Pipeline',
         compute='_compute_is_pipeline_editor',
@@ -186,10 +276,18 @@ class CrmLead(models.Model):
                 hlr_team and lead.team_id.id == hlr_team.id
             )
 
+    @api.depends('team_id')
+    def _compute_is_corporate_sales(self):
+        cs_team = self.env.ref(
+            'gopkz_crm.team_corporate_sales', raise_if_not_found=False
+        )
+        for lead in self:
+            lead.is_corporate_sales = bool(
+                cs_team and lead.team_id.id == cs_team.id
+            )
+
     @api.depends('team_id', 'stage_id')
     def _compute_scoring_locked(self):
-        """Lock scoring once the lead has advanced past Qualifying in the
-        Vendor Onboarding pipeline.  Moving back to Qualifying unlocks it."""
         vo_team = self.env.ref(
             'gopkz_crm.team_vendor_onboarding', raise_if_not_found=False
         )
@@ -204,15 +302,56 @@ class CrmLead(models.Model):
                 and lead.stage_id.sequence > qualifying.sequence
             )
 
+    @api.depends('team_id', 'stage_id')
+    def _compute_x_is_agreement_or_later(self):
+        vo_team = self.env.ref(
+            'gopkz_crm.team_vendor_onboarding', raise_if_not_found=False
+        )
+        agreement_stage = self.env.ref(
+            'gopkz_crm.stage_vo_agreement', raise_if_not_found=False
+        )
+        for lead in self:
+            lead.x_is_agreement_or_later = bool(
+                vo_team and agreement_stage
+                and lead.team_id.id == vo_team.id
+                and lead.stage_id.sequence >= agreement_stage.sequence
+            )
+
+    @api.depends(
+        'partner_id',
+        'partner_id.x_operations_user_id',
+        'partner_id.parent_id',
+        'partner_id.parent_id.x_operations_user_id',
+    )
+    @api.depends_context('uid')
+    def _compute_x_can_approve(self):
+        # Administrators can always approve.
+        is_admin = self.env.user.has_group('base.group_system')
+        for lead in self:
+            if is_admin:
+                lead.x_can_approve = True
+            else:
+                ops_user = lead._get_ops_user()
+                lead.x_can_approve = bool(ops_user and ops_user.id == self.env.uid)
+
     @api.depends_context('uid')
     def _compute_is_pipeline_editor(self):
-        """True only for Odoo System Administrators.
-        Cached per user (depends_context uid) so the flag re-evaluates
-        when a different user opens the record — not on every field change.
-        """
         is_admin = self.env.user.has_group('base.group_system')
         for lead in self:
             lead.is_pipeline_editor = is_admin
+
+    @api.depends(
+        'x_attachment_agreement_submitted',
+        'x_attachment_pictures_submitted',
+        'x_attachment_other_submitted',
+    )
+    def _compute_x_all_attachments_submitted(self):
+        for lead in self:
+            lead.x_all_attachments_submitted = (
+                lead.x_attachment_agreement_submitted
+                and lead.x_attachment_pictures_submitted
+                and lead.x_attachment_other_submitted
+            )
 
     @api.depends('lost_reason_id')
     def _compute_x_is_lost_other(self):
@@ -257,7 +396,10 @@ class CrmLead(models.Model):
         for lead in self:
             lead.hlr_destination_ids = lead.hlr_vendor_line_ids.mapped('destination_id')
 
-    @api.depends('hlr_vendor_line_ids.service_date_from', 'hlr_vendor_line_ids.service_date_to')
+    @api.depends(
+        'hlr_vendor_line_ids.service_date_from',
+        'hlr_vendor_line_ids.service_date_to',
+    )
     def _compute_hlr_travel_dates(self):
         for lead in self:
             dates_from = [l.service_date_from for l in lead.hlr_vendor_line_ids if l.service_date_from]
@@ -267,19 +409,48 @@ class CrmLead(models.Model):
 
     # ── Onchange handlers ────────────────────────────────────────────────────
 
-    @api.onchange('vendor_category_id')
-    def _onchange_vendor_category_id(self):
-        """Rebuild score lines whenever the category changes.
-        Clears all existing lines and creates one per active criterion for the
-        new category.  Also clears scoring_confirmed so the badge resets.
+    @api.onchange('partner_id')
+    def _onchange_partner_id_fill_vo_fields(self):
+        """Rebuild score lines when the business contact changes.
+
+        vendor_category_id is a related field (partner_id.vendor_category_id)
+        so it auto-updates in the UI.  However in onchange context the related
+        field cache may be stale immediately after partner_id changes, so we
+        read the category directly from the new partner and pass it explicitly
+        to _rebuild_score_lines to guarantee freshness.
         """
-        # Clear existing lines
+        cat = (
+            self.partner_id.vendor_category_id
+            if self.partner_id
+            else self.env['gopkz.vendor.category'].browse()
+        )
+        self._rebuild_score_lines(service_type=cat)
+        # x_vendor_id and x_business_channel are related fields — auto-update.
+
+    # ── Helpers ──────────────────────────────────────────────────────────────
+
+    def _rebuild_score_lines(self, service_type=None):
+        """Clear and rebuild gopkz.lead.score.line records for the given
+        service_type.
+
+        service_type — a gopkz.vendor.category record to use.  When omitted
+        the method falls back to self.vendor_category_id (safe when called
+        from _onchange_vendor_category_id where the value is always fresh).
+
+        Called from:
+          • _onchange_vendor_category_id — user changes Service Type directly;
+            self.vendor_category_id is fresh so no param needed.
+          • _onchange_partner_id_fill_vo_fields — passes partner's category
+            explicitly to avoid stale related-field cache.
+          • create() — passes lead.vendor_category_id after the record exists.
+        """
+        if service_type is None:
+            service_type = self.vendor_category_id
         self.score_line_ids = [(5, 0, 0)]
         self.scoring_confirmed = False
-
-        if self.vendor_category_id:
+        if service_type:
             criteria = self.env['gopkz.scoring.criteria'].search([
-                ('category_id', '=', self.vendor_category_id.id),
+                ('category_id', '=', service_type.id),
                 ('active', '=', True),
             ])
             self.score_line_ids = [
@@ -291,56 +462,140 @@ class CrmLead(models.Model):
                 for c in criteria
             ]
 
+    @api.onchange('vendor_category_id')
+    def _onchange_vendor_category_id(self):
+        """Rebuild criteria lines whenever Service Type changes.
+
+        Fires when the user directly edits the field.  At this point
+        self.vendor_category_id is always fresh, so no explicit param needed.
+        """
+        self._rebuild_score_lines()
+
     @api.onchange('score_line_ids')
     def _onchange_score_line_ids(self):
-        """Clear the confirmed badge when score lines change — but only while
-        still at or before Qualifying.  Past Qualifying the scores are locked
-        so this onchange won't fire from the UI anyway, but the guard keeps
-        the ORM path consistent."""
         if self.scoring_confirmed and not self.scoring_locked:
             self.scoring_confirmed = False
+
+    def _get_ops_user(self):
+        """Return the Operations Manager for this lead's business contact."""
+        self.ensure_one()
+        partner = self.partner_id
+        if not partner:
+            return False
+        if partner.x_operations_user_id:
+            return partner.x_operations_user_id
+        if partner.parent_id and partner.parent_id.x_operations_user_id:
+            return partner.parent_id.x_operations_user_id
+        return False
 
     # ── Actions ──────────────────────────────────────────────────────────────
 
     def action_confirm_scoring(self):
-        """Confirm that all criteria have been explicitly scored.
-
-        Refuses (hard block) if any line still has score_entered = False.
-        A deliberate 0 is accepted — the gate checks the flag, not the value.
-        """
         self.ensure_one()
         unscored = self.score_line_ids.filtered(lambda l: not l.score_entered)
         if unscored:
-            criteria_names = ', '.join(
-                unscored.mapped('criteria_id.name')
-            )
+            criteria_names = ', '.join(unscored.mapped('criteria_id.name'))
             raise UserError(
                 f'{len(unscored)} criterion/criteria have not been scored yet: '
                 f'{criteria_names}.\n\n'
                 'Please enter a score (including a deliberate 0) for every '
                 'criterion before confirming.'
             )
-        # Only does two things: gate check (above) and set flag (below).
         self.write({'scoring_confirmed': True})
 
-    # ── Create override — auto-assign sequential Booking ID ─────────────────
+    def action_submit_agreement(self):
+        """Submit the Signed Agreement link and notify the Operations Manager."""
+        self.ensure_one()
+        if not self.x_attachment_agreement_url:
+            raise UserError('Please enter a hyperlink before submitting.')
+        self.x_attachment_agreement_submitted = True
+        ops_user = self._get_ops_user()
+        if ops_user:
+            self.activity_schedule(
+                'mail.mail_activity_data_todo',
+                user_id=ops_user.id,
+                summary='Review Signed Agreement',
+                note=f'Signed Agreement submitted for <b>{self.name}</b>.',
+            )
+        self.message_post(body='<p>✓ Signed Agreement link submitted.</p>')
+
+    def action_submit_pictures(self):
+        """Submit the Pictures link and notify the Operations Manager."""
+        self.ensure_one()
+        if not self.x_attachment_pictures_url:
+            raise UserError('Please enter a hyperlink before submitting.')
+        self.x_attachment_pictures_submitted = True
+        ops_user = self._get_ops_user()
+        if ops_user:
+            self.activity_schedule(
+                'mail.mail_activity_data_todo',
+                user_id=ops_user.id,
+                summary='Review Pictures',
+                note=f'Pictures submitted for <b>{self.name}</b>.',
+            )
+        self.message_post(body='<p>✓ Pictures link submitted.</p>')
+
+    def action_submit_other(self):
+        """Submit the Other Documentation link and notify the Operations Manager."""
+        self.ensure_one()
+        if not self.x_attachment_other_url:
+            raise UserError('Please enter a hyperlink before submitting.')
+        self.x_attachment_other_submitted = True
+        ops_user = self._get_ops_user()
+        if ops_user:
+            self.activity_schedule(
+                'mail.mail_activity_data_todo',
+                user_id=ops_user.id,
+                summary='Review Other Documentation',
+                note=f'Other documentation submitted for <b>{self.name}</b>.',
+            )
+        self.message_post(body='<p>✓ Other documentation link submitted.</p>')
+
+    def action_approve_agreement(self):
+        """Approve the agreement and auto-advance to the Onboarding stage."""
+        self.ensure_one()
+        if not self.x_all_attachments_submitted:
+            raise UserError('All documents must be submitted before approval.')
+        is_admin = self.env.user.has_group('base.group_system')
+        if not is_admin:
+            ops_user = self._get_ops_user()
+            if ops_user and ops_user.id != self.env.uid:
+                raise UserError(
+                    'Only the assigned Operations Manager can approve the agreement.'
+                )
+        self.x_agreement_approved = True
+        onboarding_stage = self.env.ref(
+            'gopkz_crm.stage_vo_onboarding', raise_if_not_found=False
+        )
+        if onboarding_stage:
+            self.with_context(skip_scoring_gate=True).write(
+                {'stage_id': onboarding_stage.id}
+            )
+        self.message_post(body='<p>✓ Agreement approved. Lead advanced to Onboarding.</p>')
+
+    # ── Create override ──────────────────────────────────────────────────────
 
     @api.model_create_multi
     def create(self, vals_list):
+        """Single create override that:
+        1. Stamps a sequential Booking ID on every new lead.
+        2. Builds score lines from the contact's Service Type when the lead
+           is created with a business partner already set (e.g. via context /
+           default_get — onchange never fires for pre-set defaults).
+        """
         for vals in vals_list:
             if not vals.get('booking_id'):
                 vals['booking_id'] = self._generate_booking_id()
-        return super().create(vals_list)
+        records = super().create(vals_list)
+        for lead in records:
+            # vendor_category_id is a related field — after creation it is
+            # computed correctly from partner_id.  Build score lines if none
+            # were included in vals (onchange never fires during creation).
+            if lead.vendor_category_id and not lead.score_line_ids:
+                lead._rebuild_score_lines(service_type=lead.vendor_category_id)
+        return records
 
     def _generate_booking_id(self):
-        """Return the next booking ID, resetting the counter every month.
-
-        Odoo's ir.sequence with use_date_range=True resets per date-range
-        record.  By default it creates *yearly* ranges; we pre-create a
-        monthly range before calling next_by_code() so the counter starts
-        fresh on the 1st of each month while the prefix (BK%(y)s%(month)s)
-        correctly reflects the range's date_from.
-        """
         today = fields.Date.today()
         seq = self.env['ir.sequence'].sudo().search(
             [('code', '=', 'crm.lead.booking')], limit=1
@@ -353,7 +608,6 @@ class CrmLead(models.Model):
             day=calendar.monthrange(today.year, today.month)[1]
         )
 
-        # Create the monthly date-range if it does not yet exist.
         existing = self.env['ir.sequence.date_range'].sudo().search([
             ('sequence_id', '=', seq.id),
             ('date_from', '=', first_day),
@@ -365,25 +619,24 @@ class CrmLead(models.Model):
                 'date_to': last_day,
             })
 
-        # next_by_code() will now find the monthly range and use its counter.
         return self.env['ir.sequence'].next_by_code('crm.lead.booking')
 
-    # ── Write override — scoring gate on stage progression ───────────────────
+    # ── Write override — scoring gate + agreement gate ───────────────────────
 
     def write(self, vals):
-        """Block Vendor Onboarding leads from moving past Qualifying without
-        confirmed scoring.
+        """Gate stage progression in the Vendor Onboarding pipeline.
 
-        Applies the Section 0.2 pattern for determining the effective team:
-        reads vals.get('team_id') first (with an explicit is-not-None check),
-        falling back to the record's current team_id only when team_id is
-        absent from this write entirely.
+        Gate 1 (Scoring): can't advance past Qualifying without confirmed scoring.
+        Gate 2 (Agreement): can't advance past Agreement without document approval.
 
-        Marking Lost (active=False or lost_reason_id in same write) is always
-        exempt from this check.
+        Both gates are bypassed by the 'skip_scoring_gate' context key.
+        Marking Lost is always exempt.
         """
         if 'stage_id' in vals and not self.env.context.get('skip_scoring_gate'):
-            # Marking Lost is unconditionally exempt from the scoring gate.
+            # Administrators bypass all stage gates.
+            if self.env.user.has_group('base.group_system'):
+                return super().write(vals)
+
             is_lost = (
                 vals.get('active') is False
                 or 'lost_reason_id' in vals
@@ -401,12 +654,13 @@ class CrmLead(models.Model):
                         'gopkz_crm.stage_vo_qualifying',
                         raise_if_not_found=False,
                     )
+                    agreement_stage = self.env.ref(
+                        'gopkz_crm.stage_vo_agreement',
+                        raise_if_not_found=False,
+                    )
 
                     if vo_team and qualifying_stage:
                         for lead in self:
-                            # Section 0.2: read effective team from vals first.
-                            # vals.get('team_id') returns None when the key is
-                            # absent — not the same as an intentional clear (False/0).
                             new_team_id = vals.get('team_id')
                             effective_team_id = (
                                 new_team_id
@@ -415,6 +669,7 @@ class CrmLead(models.Model):
                             )
 
                             if effective_team_id == vo_team.id:
+                                # Gate 1: Scoring
                                 if target_stage.sequence > qualifying_stage.sequence:
                                     if not lead.scoring_confirmed:
                                         raise UserError(
@@ -424,5 +679,18 @@ class CrmLead(models.Model):
                                             'Open the Vendor Scoring tab and click '
                                             '"Confirm Scoring" after entering all scores.'
                                         )
+                                # Gate 2: Agreement approval
+                                if (agreement_stage
+                                        and target_stage.sequence > agreement_stage.sequence
+                                        and not lead.x_agreement_approved
+                                        and not vals.get('x_agreement_approved')):
+                                    raise UserError(
+                                        f'"{lead.name}" cannot advance past the '
+                                        'Agreement stage until all documents have '
+                                        'been submitted and the agreement approved.\n\n'
+                                        'Complete document submissions in the '
+                                        'Attachments tab and obtain approval from '
+                                        'the Operations Manager.'
+                                    )
 
         return super().write(vals)

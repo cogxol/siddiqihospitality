@@ -1,13 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <!--
-        Add Vendor Categories, Scoring Criteria, and Destinations under CRM's
-        existing Configuration menu (id=crm.crm_menu_config).
-        No new top-level menu item is created.
+        gopkz CRM configuration menu items under CRM > Configuration.
+        "Vendor Categories" is now the Service Types list (same model, renamed).
+        The legacy gopkz.service.type menu is removed — vendor_category_id is
+        the canonical service type going forward.
     -->
     <menuitem
         id="menu_gopkz_vendor_categories"
-        name="Vendor Categories"
+        name="Service Types"
         parent="crm.crm_menu_config"
         action="gopkz_crm.action_gopkz_vendor_category"
         sequence="50"/>
@@ -25,11 +26,4 @@
         parent="crm.crm_menu_config"
         action="gopkz_crm.action_gopkz_destination"
         sequence="52"/>
-
-    <menuitem
-        id="menu_gopkz_service_types"
-        name="Service Types"
-        parent="crm.crm_menu_config"
-        action="gopkz_crm.action_gopkz_service_type"
-        sequence="53"/>
 </odoo>
