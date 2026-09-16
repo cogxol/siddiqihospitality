@@ -303,9 +303,14 @@ class CrmLead(models.Model):
     )
     @api.depends_context('uid')
     def _compute_x_can_approve(self):
+        # Administrators can always approve.
+        is_admin = self.env.user.has_group('base.group_system')
         for lead in self:
-            ops_user = lead._get_ops_user()
-            lead.x_can_approve = bool(ops_user and ops_user.id == self.env.uid)
+            if is_admin:
+                lead.x_can_approve = True
+            else:
+                ops_user = lead._get_ops_user()
+                lead.x_can_approve = bool(ops_user and ops_user.id == self.env.uid)
 
     @api.depends_context('uid')
     def _compute_is_pipeline_editor(self):
@@ -526,11 +531,13 @@ class CrmLead(models.Model):
         self.ensure_one()
         if not self.x_all_attachments_submitted:
             raise UserError('All documents must be submitted before approval.')
-        ops_user = self._get_ops_user()
-        if ops_user and ops_user.id != self.env.uid:
-            raise UserError(
-                'Only the assigned Operations Manager can approve the agreement.'
-            )
+        is_admin = self.env.user.has_group('base.group_system')
+        if not is_admin:
+            ops_user = self._get_ops_user()
+            if ops_user and ops_user.id != self.env.uid:
+                raise UserError(
+                    'Only the assigned Operations Manager can approve the agreement.'
+                )
         self.x_agreement_approved = True
         onboarding_stage = self.env.ref(
             'gopkz_crm.stage_vo_onboarding', raise_if_not_found=False
@@ -588,6 +595,10 @@ class CrmLead(models.Model):
         Marking Lost is always exempt.
         """
         if 'stage_id' in vals and not self.env.context.get('skip_scoring_gate'):
+            # Administrators bypass all stage gates.
+            if self.env.user.has_group('base.group_system'):
+                return super().write(vals)
+
             is_lost = (
                 vals.get('active') is False
                 or 'lost_reason_id' in vals
