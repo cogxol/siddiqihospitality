@@ -13,23 +13,23 @@ class GopkzBookingVendorLine(models.Model):
         ondelete='cascade',
         index=True,
     )
+
+    # ── Business contact (partner with a Service Type set) ───────────────────
     vendor_id = fields.Many2one(
         'res.partner',
-        string='Vendor',
+        string='Business',
         required=True,
         domain=[('vendor_category_id', '!=', False)],
     )
+    # Service Type pulled automatically from the selected business.
     vendor_category_id = fields.Many2one(
         'gopkz.vendor.category',
-        string='Vendor Category',
+        string='Service Type',
         related='vendor_id.vendor_category_id',
         store=True,
         readonly=True,
     )
-    service_type_id = fields.Many2one(
-        'gopkz.service.type',
-        string='Service Type',
-    )
+
     destination_id = fields.Many2one(
         'gopkz.destination',
         string='Destination',
@@ -80,3 +80,11 @@ class GopkzBookingVendorLine(models.Model):
     def _compute_payable_vendor_amount(self):
         for line in self:
             line.payable_vendor_amount = line.vendor_amount - line.commission_amount
+
+    # ── Onchange ─────────────────────────────────────────────────────────────
+
+    @api.onchange('vendor_id')
+    def _onchange_vendor_id(self):
+        """Auto-fill Commission % from the selected business contact."""
+        if self.vendor_id:
+            self.commission_pct = self.vendor_id.x_commission_percentage
