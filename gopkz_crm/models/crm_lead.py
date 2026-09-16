@@ -425,14 +425,24 @@ class CrmLead(models.Model):
     # ── Helpers ──────────────────────────────────────────────────────────────
 
     def _rebuild_score_lines(self):
-        """Clear and rebuild gopkz.lead.score.line records for the current
-        vendor_category_id.  Safe to call from both onchange and create/write
-        contexts."""
+        """Clear and rebuild gopkz.lead.score.line records driven by the
+        partner's Service Type.
+
+        We read service_type directly from partner_id.vendor_category_id
+        rather than from the related field self.vendor_category_id to avoid
+        cached/stale values in onchange context where the related field may
+        not have been re-evaluated yet after partner_id changed.
+        """
         self.score_line_ids = [(5, 0, 0)]
         self.scoring_confirmed = False
-        if self.vendor_category_id:
+        service_type = (
+            self.partner_id.vendor_category_id
+            if self.partner_id
+            else self.env['gopkz.vendor.category']
+        )
+        if service_type:
             criteria = self.env['gopkz.scoring.criteria'].search([
-                ('category_id', '=', self.vendor_category_id.id),
+                ('category_id', '=', service_type.id),
                 ('active', '=', True),
             ])
             self.score_line_ids = [
