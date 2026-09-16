@@ -15,14 +15,15 @@ class CrmLead(models.Model):
         tracking=True,
     )
 
-    # ── Service Type — related from the business contact ────────────────────
-    # Mirrors partner_id.vendor_category_id so it always reflects the
-    # contact's service type without any manual entry.
+    # ── Service Type ─────────────────────────────────────────────────────────
+    # Stored, editable field.  Auto-filled from the business contact's service
+    # type when partner_id is set/changed, but the user can override it.
+    # Changing it triggers _onchange_vendor_category_id which rebuilds the
+    # scoring criteria lines.
     vendor_category_id = fields.Many2one(
-        related='partner_id.vendor_category_id',
+        'gopkz.vendor.category',
         string='Service Type',
-        store=False,
-        readonly=True,
+        tracking=True,
     )
 
     # ── Vendor (parent company of the business contact) ─────────────────────
@@ -417,8 +418,8 @@ class CrmLead(models.Model):
         """
         if not self.partner_id or not self.partner_id.vendor_category_id:
             return
-        # vendor_category_id is now a related field — it updates automatically.
-        # Rebuild score lines explicitly since onchange chaining is not guaranteed.
+        # Auto-fill service type from the business contact, then rebuild lines.
+        self.vendor_category_id = self.partner_id.vendor_category_id
         self._rebuild_score_lines()
         # x_vendor_id and x_business_channel are related fields — auto-update.
 
@@ -426,23 +427,19 @@ class CrmLead(models.Model):
 
     def _rebuild_score_lines(self):
         """Clear and rebuild gopkz.lead.score.line records driven by the
-        partner's Service Type.
+        Service Type (vendor_category_id) field on this lead.
 
-        We read service_type directly from partner_id.vendor_category_id
-        rather than from the related field self.vendor_category_id to avoid
-        cached/stale values in onchange context where the related field may
-        not have been re-evaluated yet after partner_id changed.
+        Called from:
+          • _onchange_vendor_category_id — user manually changes Service Type
+          • _onchange_partner_id_fill_vo_fields — after auto-filling Service
+            Type from the linked business contact
+          • create() — when partner_id is pre-set via context/defaults
         """
         self.score_line_ids = [(5, 0, 0)]
         self.scoring_confirmed = False
-        service_type = (
-            self.partner_id.vendor_category_id
-            if self.partner_id
-            else self.env['gopkz.vendor.category']
-        )
-        if service_type:
+        if self.vendor_category_id:
             criteria = self.env['gopkz.scoring.criteria'].search([
-                ('category_id', '=', service_type.id),
+                ('category_id', '=', self.vendor_category_id.id),
                 ('active', '=', True),
             ])
             self.score_line_ids = [
@@ -453,6 +450,11 @@ class CrmLead(models.Model):
                 })
                 for c in criteria
             ]
+
+    @api.onchange('vendor_category_id')
+    def _onchange_vendor_category_id(self):
+        """Rebuild criteria lines whenever Service Type is changed manually."""
+        self._rebuild_score_lines()
 
     @api.onchange('score_line_ids')
     def _onchange_score_line_ids(self):
@@ -571,9 +573,8 @@ class CrmLead(models.Model):
                 vals['booking_id'] = self._generate_booking_id()
         records = super().create(vals_list)
         for lead in records:
-            # vendor_category_id is a related field that already mirrors
-            # partner_id.vendor_category_id.  Just build score lines if
-            # none were created as part of vals.
+            # Build score lines when vendor_category_id is already set (e.g.
+            # via context/defaults) since onchange never fires on creation.
             if lead.vendor_category_id and not lead.score_line_ids:
                 lead._rebuild_score_lines()
         return records
