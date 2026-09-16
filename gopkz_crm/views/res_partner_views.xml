@@ -176,7 +176,7 @@
                     The Vendor field (parent_id) only appears when Service Type is
                     set so the user can link the Business to its parent vendor. -->
             <xpath expr="//field[@name='category_id']" position="after">
-                <field name="vendor_category_id"/>
+                <field name="vendor_category_id" invisible="not is_company"/>
                 <field name="parent_id"
                        string="Vendor"
                        invisible="not vendor_category_id"
