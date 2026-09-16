@@ -382,6 +382,22 @@ class CrmLead(models.Model):
 
     # ── Onchange handlers ────────────────────────────────────────────────────
 
+    @api.onchange('partner_id')
+    def _onchange_partner_id_fill_vo_fields(self):
+        """In the Vendor Onboarding pipeline, auto-fill Service Type from the
+        linked business contact so the scoring tab is pre-populated."""
+        if not self.partner_id:
+            return
+        vo_team = self.env.ref(
+            'gopkz_crm.team_vendor_onboarding', raise_if_not_found=False
+        )
+        if not vo_team or self.team_id.id != vo_team.id:
+            return
+        if self.partner_id.vendor_category_id:
+            self.vendor_category_id = self.partner_id.vendor_category_id
+        # x_business_channel is a related field on partner_id — it updates
+        # automatically when partner_id changes; no explicit assignment needed.
+
     @api.onchange('vendor_category_id')
     def _onchange_vendor_category_id(self):
         """Rebuild score lines whenever the Service Type changes."""

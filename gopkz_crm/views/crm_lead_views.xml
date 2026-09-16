@@ -38,7 +38,8 @@
                 <field name="x_business_channel"
                        string="Business Channel"
                        invisible="not is_vendor_onboarding"/>
-                <field name="booking_id" string="Booking ID" readonly="1"/>
+                <field name="booking_id" string="Booking ID" readonly="1"
+                       invisible="not is_hot_lead_recovery"/>
                 <field name="hlr_destination_ids"
                        string="Destinations"
                        widget="many2many_tags"
@@ -54,9 +55,10 @@
                        invisible="not is_hot_lead_recovery"/>
             </xpath>
 
-            <!-- booking_id also in the lead-type right-column group -->
+            <!-- booking_id in the lead-type right-column group: HLR only -->
             <xpath expr="//group[@invisible=&quot;type == 'opportunity'&quot;]/field[@name='team_id']" position="after">
-                <field name="booking_id" string="Booking ID" readonly="1"/>
+                <field name="booking_id" string="Booking ID" readonly="1"
+                       invisible="not is_hot_lead_recovery"/>
             </xpath>
 
             <!-- Relabel and restrict team_id in the LEAD right-column group -->
