@@ -404,22 +404,6 @@ class CrmLead(models.Model):
             lead.hlr_travel_date_from = min(dates_from) if dates_from else False
             lead.hlr_travel_date_to = max(dates_to) if dates_to else False
 
-    # ── Create override ──────────────────────────────────────────────────────
-
-    @api.model_create_multi
-    def create(self, vals_list):
-        """Fill vendor_category_id and score lines from the partner on record
-        creation so the scoring tab is pre-populated even when partner_id is
-        set via context / default_get (where onchange never fires)."""
-        records = super().create(vals_list)
-        for lead in records:
-            # vendor_category_id is a related field — it already mirrors
-            # partner_id.vendor_category_id automatically.  We only need to
-            # build the score lines if none were provided in vals.
-            if lead.vendor_category_id and not lead.score_line_ids:
-                lead._rebuild_score_lines()
-        return records
-
     # ── Onchange handlers ────────────────────────────────────────────────────
 
     @api.onchange('partner_id')
@@ -562,14 +546,27 @@ class CrmLead(models.Model):
             )
         self.message_post(body='<p>✓ Agreement approved. Lead advanced to Onboarding.</p>')
 
-    # ── Create override — auto-assign sequential Booking ID ─────────────────
+    # ── Create override ──────────────────────────────────────────────────────
 
     @api.model_create_multi
     def create(self, vals_list):
+        """Single create override that:
+        1. Stamps a sequential Booking ID on every new lead.
+        2. Builds score lines from the contact's Service Type when the lead
+           is created with a business partner already set (e.g. via context /
+           default_get — onchange never fires for pre-set defaults).
+        """
         for vals in vals_list:
             if not vals.get('booking_id'):
                 vals['booking_id'] = self._generate_booking_id()
-        return super().create(vals_list)
+        records = super().create(vals_list)
+        for lead in records:
+            # vendor_category_id is a related field that already mirrors
+            # partner_id.vendor_category_id.  Just build score lines if
+            # none were created as part of vals.
+            if lead.vendor_category_id and not lead.score_line_ids:
+                lead._rebuild_score_lines()
+        return records
 
     def _generate_booking_id(self):
         today = fields.Date.today()
