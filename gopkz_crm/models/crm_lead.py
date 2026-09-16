@@ -380,35 +380,53 @@ class CrmLead(models.Model):
             lead.hlr_travel_date_from = min(dates_from) if dates_from else False
             lead.hlr_travel_date_to = max(dates_to) if dates_to else False
 
+    # ── Create override ──────────────────────────────────────────────────────
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        """Fill vendor_category_id and score lines from the partner on record
+        creation so the scoring tab is pre-populated even when partner_id is
+        set via context / default_get (where onchange never fires)."""
+        records = super().create(vals_list)
+        for lead in records:
+            if (lead.partner_id
+                    and lead.partner_id.vendor_category_id
+                    and not lead.vendor_category_id):
+                lead.vendor_category_id = lead.partner_id.vendor_category_id
+                lead._rebuild_score_lines()
+        return records
+
     # ── Onchange handlers ────────────────────────────────────────────────────
 
     @api.onchange('partner_id')
     def _onchange_partner_id_fill_vo_fields(self):
-        """Auto-fill Service Type from the linked business contact whenever the
-        contact is set or changed.
+        """Auto-fill Service Type (and via it, score lines) from the linked
+        business contact whenever partner_id is set or changed interactively.
 
-        We do NOT gate on team_id here because the user may pick the contact
-        before selecting the pipeline, causing the team check to fail.  The
-        scoring tab is already hidden for non-VO pipelines, so populating
-        vendor_category_id and score_line_ids in other pipelines is harmless.
-
-        We call _onchange_vendor_category_id() explicitly rather than relying
-        on onchange chaining, which is not guaranteed across inheritance.
+        We do NOT gate on team_id: the user may pick the contact before
+        selecting the pipeline.  The scoring tab is invisible for non-VO
+        pipelines so populating these fields elsewhere is harmless.
         """
         if not self.partner_id or not self.partner_id.vendor_category_id:
             return
         self.vendor_category_id = self.partner_id.vendor_category_id
-        # Rebuild score lines for the new service type immediately.
-        self._onchange_vendor_category_id()
+        self._rebuild_score_lines()
         # x_business_channel is a related field on partner_id — it updates
         # automatically when partner_id changes; no explicit assignment needed.
 
     @api.onchange('vendor_category_id')
     def _onchange_vendor_category_id(self):
-        """Rebuild score lines whenever the Service Type changes."""
+        """Rebuild score lines whenever the Service Type changes manually."""
+        self._rebuild_score_lines()
+
+    # ── Helpers ──────────────────────────────────────────────────────────────
+
+    def _rebuild_score_lines(self):
+        """Clear and rebuild gopkz.lead.score.line records for the current
+        vendor_category_id.  Safe to call from both onchange and create/write
+        contexts."""
         self.score_line_ids = [(5, 0, 0)]
         self.scoring_confirmed = False
-
         if self.vendor_category_id:
             criteria = self.env['gopkz.scoring.criteria'].search([
                 ('category_id', '=', self.vendor_category_id.id),
@@ -427,8 +445,6 @@ class CrmLead(models.Model):
     def _onchange_score_line_ids(self):
         if self.scoring_confirmed and not self.scoring_locked:
             self.scoring_confirmed = False
-
-    # ── Helpers ──────────────────────────────────────────────────────────────
 
     def _get_ops_user(self):
         """Return the Operations Manager for this lead's business contact."""
