@@ -16,14 +16,16 @@ class CrmLead(models.Model):
     )
 
     # ── Service Type ─────────────────────────────────────────────────────────
-    # Stored, editable field.  Auto-filled from the business contact's service
-    # type when partner_id is set/changed, but the user can override it.
-    # Changing it triggers _onchange_vendor_category_id which rebuilds the
-    # scoring criteria lines.
+    # Related field — always mirrors partner_id.vendor_category_id so it
+    # auto-fills from the business contact.  readonly=False lets the user
+    # override it on the lead without changing the contact record.
+    # _onchange_vendor_category_id rebuilds the scoring criteria whenever it
+    # changes (whether via contact selection or a manual override).
     vendor_category_id = fields.Many2one(
-        'gopkz.vendor.category',
+        related='partner_id.vendor_category_id',
         string='Service Type',
-        tracking=True,
+        store=False,
+        readonly=False,
     )
 
     # ── Vendor (parent company of the business contact) ─────────────────────
@@ -409,37 +411,46 @@ class CrmLead(models.Model):
 
     @api.onchange('partner_id')
     def _onchange_partner_id_fill_vo_fields(self):
-        """Auto-fill Service Type (and via it, score lines) from the linked
-        business contact whenever partner_id is set or changed interactively.
+        """Rebuild score lines when the business contact changes.
 
-        We do NOT gate on team_id: the user may pick the contact before
-        selecting the pipeline.  The scoring tab is invisible for non-VO
-        pipelines so populating these fields elsewhere is harmless.
+        vendor_category_id is a related field (partner_id.vendor_category_id)
+        so it auto-updates in the UI.  However in onchange context the related
+        field cache may be stale immediately after partner_id changes, so we
+        read the category directly from the new partner and pass it explicitly
+        to _rebuild_score_lines to guarantee freshness.
         """
-        if not self.partner_id or not self.partner_id.vendor_category_id:
-            return
-        # Auto-fill service type from the business contact, then rebuild lines.
-        self.vendor_category_id = self.partner_id.vendor_category_id
-        self._rebuild_score_lines()
+        cat = (
+            self.partner_id.vendor_category_id
+            if self.partner_id
+            else self.env['gopkz.vendor.category'].browse()
+        )
+        self._rebuild_score_lines(service_type=cat)
         # x_vendor_id and x_business_channel are related fields — auto-update.
 
     # ── Helpers ──────────────────────────────────────────────────────────────
 
-    def _rebuild_score_lines(self):
-        """Clear and rebuild gopkz.lead.score.line records driven by the
-        Service Type (vendor_category_id) field on this lead.
+    def _rebuild_score_lines(self, service_type=None):
+        """Clear and rebuild gopkz.lead.score.line records for the given
+        service_type.
+
+        service_type — a gopkz.vendor.category record to use.  When omitted
+        the method falls back to self.vendor_category_id (safe when called
+        from _onchange_vendor_category_id where the value is always fresh).
 
         Called from:
-          • _onchange_vendor_category_id — user manually changes Service Type
-          • _onchange_partner_id_fill_vo_fields — after auto-filling Service
-            Type from the linked business contact
-          • create() — when partner_id is pre-set via context/defaults
+          • _onchange_vendor_category_id — user changes Service Type directly;
+            self.vendor_category_id is fresh so no param needed.
+          • _onchange_partner_id_fill_vo_fields — passes partner's category
+            explicitly to avoid stale related-field cache.
+          • create() — passes lead.vendor_category_id after the record exists.
         """
+        if service_type is None:
+            service_type = self.vendor_category_id
         self.score_line_ids = [(5, 0, 0)]
         self.scoring_confirmed = False
-        if self.vendor_category_id:
+        if service_type:
             criteria = self.env['gopkz.scoring.criteria'].search([
-                ('category_id', '=', self.vendor_category_id.id),
+                ('category_id', '=', service_type.id),
                 ('active', '=', True),
             ])
             self.score_line_ids = [
@@ -453,7 +464,11 @@ class CrmLead(models.Model):
 
     @api.onchange('vendor_category_id')
     def _onchange_vendor_category_id(self):
-        """Rebuild criteria lines whenever Service Type is changed manually."""
+        """Rebuild criteria lines whenever Service Type changes.
+
+        Fires when the user directly edits the field.  At this point
+        self.vendor_category_id is always fresh, so no explicit param needed.
+        """
         self._rebuild_score_lines()
 
     @api.onchange('score_line_ids')
@@ -573,10 +588,11 @@ class CrmLead(models.Model):
                 vals['booking_id'] = self._generate_booking_id()
         records = super().create(vals_list)
         for lead in records:
-            # Build score lines when vendor_category_id is already set (e.g.
-            # via context/defaults) since onchange never fires on creation.
+            # vendor_category_id is a related field — after creation it is
+            # computed correctly from partner_id.  Build score lines if none
+            # were included in vals (onchange never fires during creation).
             if lead.vendor_category_id and not lead.score_line_ids:
-                lead._rebuild_score_lines()
+                lead._rebuild_score_lines(service_type=lead.vendor_category_id)
         return records
 
     def _generate_booking_id(self):
