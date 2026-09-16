@@ -27,19 +27,6 @@
         <field name="inherit_id" ref="base.view_partner_form"/>
         <field name="arch" type="xml">
 
-            <!--
-                0. Hide the standard "Company Name" parent_id field in the form
-                   header for Vendor Business contacts.  They use the custom
-                   Vendor (parent_id) field shown below service type instead,
-                   which has the correct domain filtering.
-            -->
-            <xpath expr="//field[@name='parent_id'][@widget='res_partner_many2one']"
-                   position="attributes">
-                <!-- Keep original logic AND hide for vendor_business
-                     (they use the custom Vendor field below Service Type instead) -->
-                <attribute name="invisible">(((is_company and not parent_id) or company_name) and company_name != '') or company_type == 'vendor_business'</attribute>
-            </xpath>
-
             <!-- 1. Smart button: Businesses count (visible on vendor/parent contacts). -->
             <xpath expr="//div[@name='button_box']" position="inside">
                 <field name="x_vendor_business_count" invisible="1"/>
@@ -189,9 +176,7 @@
                     The Vendor field (parent_id) only appears when Service Type is
                     set so the user can link the Business to its parent vendor. -->
             <xpath expr="//field[@name='category_id']" position="after">
-                <!-- Service Type only visible when contact type is Vendor Business -->
-                <field name="vendor_category_id"
-                       invisible="company_type != 'vendor_business'"/>
+                <field name="vendor_category_id"/>
                 <field name="parent_id"
                        string="Vendor"
                        invisible="not vendor_category_id"

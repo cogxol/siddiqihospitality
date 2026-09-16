@@ -17,51 +17,6 @@ class ResPartner(models.Model):
              'relationship with this partner.',
     )
 
-    # ── Contact-type extension: Vendor Business ──────────────────────────────
-    # Adds a third option to the standard Person / Company radio button.
-    # Selecting "Vendor Business" marks this contact as a business unit of a
-    # vendor company.  The stored boolean x_is_vendor_business persists the
-    # selection even before a Service Type is chosen, so the Service Type field
-    # stays visible without the radio button snapping back to "Person".
-
-    company_type = fields.Selection(
-        selection_add=[('vendor_business', 'Vendor Business')],
-        # 'set default' reverts vendor_business partners to 'person' on module
-        # uninstall.  default='person' is required by the assertion even though
-        # this is a computed field and the default is never used at runtime.
-        ondelete={'vendor_business': 'set default'},
-        default='person',
-    )
-
-    x_is_vendor_business = fields.Boolean(
-        string='Is Vendor Business',
-        default=False,
-        help='True when the user has selected "Vendor Business" as the contact '
-             'type.  Stores the intent before a Service Type is chosen.',
-    )
-
-    @api.depends('is_company', 'x_is_vendor_business', 'vendor_category_id')
-    def _compute_company_type(self):
-        for partner in self:
-            # is_company wins — a company contact is always "Company".
-            if partner.is_company:
-                partner.company_type = 'company'
-            elif partner.x_is_vendor_business or partner.vendor_category_id:
-                partner.company_type = 'vendor_business'
-            else:
-                partner.company_type = 'person'
-
-    def _write_company_type(self):
-        for partner in self:
-            if partner.company_type == 'vendor_business':
-                partner.is_company = False
-                partner.x_is_vendor_business = True
-            else:
-                # Switching away from Vendor Business clears the vendor fields.
-                partner.x_is_vendor_business = False
-                partner.vendor_category_id = False
-                partner.is_company = partner.company_type == 'company'
-
     # ── Service Type (identifies a partner as a Business) ────────────────────
     # When set, this partner is a "Business" and the Vendor Details tab appears.
     # One vendor company can have multiple child business contacts, each with
