@@ -119,6 +119,7 @@
                     <field name="hlr_vendor_line_ids">
                         <list editable="bottom">
                             <field name="currency_id" column_invisible="1"/>
+                            <field name="vendor_parent_id" string="Vendor" readonly="1"/>
                             <field name="vendor_id" string="Business"/>
                             <field name="vendor_category_id"
                                    string="Service Type"

@@ -21,6 +21,13 @@ class GopkzBookingVendorLine(models.Model):
         required=True,
         domain=[('vendor_category_id', '!=', False)],
     )
+    # Parent vendor company of the selected business — related, read-only.
+    vendor_parent_id = fields.Many2one(
+        related='vendor_id.parent_id',
+        string='Vendor',
+        store=False,
+        readonly=True,
+    )
     # Service Type pulled automatically from the selected business.
     vendor_category_id = fields.Many2one(
         'gopkz.vendor.category',
