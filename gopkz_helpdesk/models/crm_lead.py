@@ -79,13 +79,21 @@ class CrmLead(models.Model):
 
         # ── Track B: one ticket for the whole booking ─────────────────────────
         if cx_team:
+            # Collect unique service categories from all vendor lines on this booking
+            service_cat_ids = list(
+                {line.vendor_id.vendor_category_id.id
+                 for line in self.hlr_vendor_line_ids
+                 if line.vendor_id.vendor_category_id}
+            )
             vals = {
                 'name': f'Travel Support — {self.name}',
                 'team_id': cx_team.id,
                 'x_ticket_type': 'travel_support',
                 'x_hlr_lead_id': self.id,
-                'partner_id': self.partner_id.id,
+                'partner_id': self.partner_id.id if self.partner_id else False,
             }
+            if service_cat_ids:
+                vals['x_service_category_ids'] = [(6, 0, service_cat_ids)]
             if pre_travel:
                 vals['stage_id'] = pre_travel.id
             ticket.create(vals)

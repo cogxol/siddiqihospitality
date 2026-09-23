@@ -111,14 +111,15 @@ class HelpdeskTicket(models.Model):
     # ── Helpers ───────────────────────────────────────────────────────────────
 
     def _get_first_stage(self):
-        """Return the lowest-sequence helpdesk.stage for this ticket's team."""
+        """Return the lowest-sequence helpdesk.stage for this ticket's team.
+
+        In Odoo 19, stages are linked to teams via team.stage_ids (not via a
+        team_ids field on the stage), so we traverse the relationship from the
+        team side and sort in Python.
+        """
         if not self.team_id:
             return self.env['helpdesk.stage'].browse()
-        return self.env['helpdesk.stage'].search(
-            [('team_ids', 'in', self.team_id.id)],
-            order='sequence asc',
-            limit=1,
-        )
+        return self.team_id.stage_ids.sorted('sequence')[:1]
 
     # ── Write gate ────────────────────────────────────────────────────────────
 
