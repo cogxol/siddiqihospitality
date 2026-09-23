@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Add "Flight" to the gopkz.vendor.category master data.
+
+    Hotel, Car Rental, Tour, and Experience are defined in gopkz_crm.
+    Flight is added here because:
+    - Siddiqi Hospitality does not onboard airlines through the Vendor
+      Onboarding pipeline (no scoring criteria needed for airlines).
+    - However, helpdesk tickets for Air Flight bookings still need a
+      service category tag, so the record must exist.
+-->
+<odoo noupdate="1">
+    <record id="vendor_cat_flight" model="gopkz.vendor.category">
+        <field name="name">Flight</field>
+    </record>
+</odoo>

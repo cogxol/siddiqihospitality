@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Two operational helpdesk teams for GOPKZ CX Helpdesk.
+
+    A sink team (archived, invisible) also exists to receive the default
+    global Helpdesk stages after the post_init_hook reassigns them —
+    mirroring the identical pattern in gopkz_crm/data/crm_team_data.xml.
+-->
+<odoo noupdate="1">
+
+    <!-- Sink: owns the default global helpdesk stages after post_init_hook -->
+    <record id="team_default_stages_sink" model="helpdesk.team">
+        <field name="name">Default Stages (hidden)</field>
+        <field name="active" eval="False"/>
+    </record>
+
+    <!-- Track A: Supplier Confirmation + ad-hoc Vendor Support -->
+    <record id="team_supplier_operations" model="helpdesk.team">
+        <field name="name">Supplier Operations</field>
+        <field name="active" eval="True"/>
+    </record>
+
+    <!-- Track B: Customer Travel Support + ad-hoc Corporate Account Support -->
+    <record id="team_customer_experience" model="helpdesk.team">
+        <field name="name">Customer Experience</field>
+        <field name="active" eval="True"/>
+    </record>
+
+</odoo>
