@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!--
+        Extend the res.partner form view (two XPaths, both from gopkz_helpdesk):
+
+        XPath 1 — "Support Tickets" smart button in button_box.
+                  Visible on Business contacts (vendor_category_id set) and
+                  corporate-account contacts (x_is_corporate_account=True).
+
+        XPath 2 — Customer Relationship group appended after the outer group
+                  in the "Vendor Details" tab (added by gopkz_crm).
+
+        XPath 3 — Customer Relationship group appended in the "Corporate Account"
+                  tab (also added by gopkz_crm).
+    -->
+    <record id="view_partner_form_gopkz_helpdesk" model="ir.ui.view">
+        <field name="name">res.partner.form.gopkz.helpdesk</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="base.view_partner_form"/>
+        <field name="arch" type="xml">
+
+            <!-- 1. Support Tickets smart button ─────────────────────────── -->
+            <xpath expr="//div[@name='button_box']" position="inside">
+                <field name="x_support_ticket_count" invisible="1"/>
+                <button class="oe_stat_button"
+                        type="object"
+                        name="action_view_support_tickets"
+                        icon="fa-life-ring"
+                        invisible="x_support_ticket_count == 0">
+                    <field name="x_support_ticket_count"
+                           widget="statinfo"
+                           string="Support"/>
+                </button>
+            </xpath>
+
+            <!--
+                2. Customer Relationship stats appended to the Vendor Details
+                   tab (page name="gopkz_vendor_details", added by gopkz_crm).
+                   We target the single direct-child <group> of that page so
+                   the new group appears below the Vendor Configuration /
+                   Performance (HLR) two-column block.
+            -->
+            <xpath expr="//page[@name='gopkz_vendor_details']/group"
+                   position="after">
+                <group>
+                    <group string="Customer Relationship">
+                        <field name="x_customer_total_bookings"
+                               string="Total Bookings"
+                               readonly="1"/>
+                        <field name="x_customer_last_booking_date"
+                               string="Last Customer Booking"
+                               readonly="1"/>
+                        <field name="x_customer_is_repeat"
+                               string="Repeat Customer"
+                               readonly="1"/>
+                    </group>
+                </group>
+            </xpath>
+
+            <!--
+                3. Same stats on the Corporate Account tab
+                   (page name="gopkz_corporate_account", added by gopkz_crm).
+            -->
+            <xpath expr="//page[@name='gopkz_corporate_account']/group"
+                   position="after">
+                <group>
+                    <group string="Customer Relationship">
+                        <field name="x_customer_total_bookings"
+                               string="Total Bookings"
+                               readonly="1"/>
+                        <field name="x_customer_last_booking_date"
+                               string="Last Customer Booking"
+                               readonly="1"/>
+                        <field name="x_customer_is_repeat"
+                               string="Repeat Customer"
+                               readonly="1"/>
+                    </group>
+                </group>
+            </xpath>
+
+        </field>
+    </record>
+
+</odoo>

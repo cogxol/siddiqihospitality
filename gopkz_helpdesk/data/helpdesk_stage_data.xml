@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Team-scoped Helpdesk stages.  Sequence ranges:
+        Supplier Operations:  10 – 40
+        Customer Experience: 110 – 140
+
+    The post_init_hook hides default global stages (team_ids=False) by
+    assigning them to the archived team_default_stages_sink, so these
+    custom stages are the only ones visible in each team's kanban.
+
+    SUPPLIER OPERATIONS — 4 stages
+    ┌────────────────────┬─────┬──────────┐
+    │ Stage              │ Seq │ is_close │
+    ├────────────────────┼─────┼──────────┤
+    │ New                │  10 │  False   │  Vendor Support entry point
+    │ Confirmation       │  20 │  False   │  Track A entry point (auto-created)
+    │   Pending          │     │          │
+    │ Confirmed          │  30 │  True    │  Positive close (both tracks)
+    │ Rejected           │  40 │  True    │  Negative close (both tracks)
+    └────────────────────┴─────┴──────────┘
+
+    CUSTOMER EXPERIENCE — 4 stages
+    ┌────────────────────┬─────┬──────────┐
+    │ Stage              │ Seq │ is_close │
+    ├────────────────────┼─────┼──────────┤
+    │ Pre-Travel Support │ 110 │  False   │  Track B entry (auto-created)
+    │ During Travel      │ 120 │  False   │  Cron-advanced
+    │   Support          │     │          │
+    │ Post-Service       │ 130 │  False   │  Cron-advanced
+    │   Support          │     │          │
+    │ Feedback           │ 140 │  True    │  Manual; triggers rating email
+    └────────────────────┴─────┴──────────┘
+-->
+<odoo noupdate="1">
+
+    <!-- ── Supplier Operations ────────────────────────────────────────────── -->
+
+    <record id="stage_supplier_new" model="helpdesk.stage">
+        <field name="name">New</field>
+        <field name="sequence">10</field>
+        <field name="fold" eval="False"/>
+        <field name="team_ids" eval="[(4, ref('gopkz_helpdesk.team_supplier_operations'))]"/>
+    </record>
+
+    <record id="stage_supplier_confirmation_pending" model="helpdesk.stage">
+        <field name="name">Confirmation Pending</field>
+        <field name="sequence">20</field>
+        <field name="fold" eval="False"/>
+        <field name="team_ids" eval="[(4, ref('gopkz_helpdesk.team_supplier_operations'))]"/>
+    </record>
+
+    <record id="stage_supplier_confirmed" model="helpdesk.stage">
+        <field name="name">Confirmed</field>
+        <field name="sequence">30</field>
+        <field name="fold" eval="True"/>
+        <field name="team_ids" eval="[(4, ref('gopkz_helpdesk.team_supplier_operations'))]"/>
+    </record>
+
+    <record id="stage_supplier_rejected" model="helpdesk.stage">
+        <field name="name">Rejected</field>
+        <field name="sequence">40</field>
+        <field name="fold" eval="True"/>
+        <field name="team_ids" eval="[(4, ref('gopkz_helpdesk.team_supplier_operations'))]"/>
+    </record>
+
+    <!-- ── Customer Experience ────────────────────────────────────────────── -->
+
+    <record id="stage_cx_pre_travel" model="helpdesk.stage">
+        <field name="name">Pre-Travel Support</field>
+        <field name="sequence">110</field>
+        <field name="fold" eval="False"/>
+        <field name="team_ids" eval="[(4, ref('gopkz_helpdesk.team_customer_experience'))]"/>
+    </record>
+
+    <record id="stage_cx_during_travel" model="helpdesk.stage">
+        <field name="name">During Travel Support</field>
+        <field name="sequence">120</field>
+        <field name="fold" eval="False"/>
+        <field name="team_ids" eval="[(4, ref('gopkz_helpdesk.team_customer_experience'))]"/>
+    </record>
+
+    <record id="stage_cx_post_service" model="helpdesk.stage">
+        <field name="name">Post-Service Support</field>
+        <field name="sequence">130</field>
+        <field name="fold" eval="False"/>
+        <field name="team_ids" eval="[(4, ref('gopkz_helpdesk.team_customer_experience'))]"/>
+    </record>
+
+    <!--
+        Feedback — is_close=True fires Odoo's native customer-rating email
+        when a template is configured on the stage (Settings → Helpdesk).
+        No custom code needed; Odoo handles the rating request automatically.
+    -->
+    <record id="stage_cx_feedback" model="helpdesk.stage">
+        <field name="name">Feedback</field>
+        <field name="sequence">140</field>
+        <field name="fold" eval="True"/>
+        <field name="team_ids" eval="[(4, ref('gopkz_helpdesk.team_customer_experience'))]"/>
+    </record>
+
+</odoo>

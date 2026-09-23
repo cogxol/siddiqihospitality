@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!--
+        Extend the native helpdesk.ticket form view to add:
+
+        XPath 1 — GOPKZ Details page in the notebook.
+                  All custom fields live here: ticket type, service categories,
+                  booking / vendor / corporate account linkage, escalation
+                  department, and closure outcome.
+
+        XPath 2 — Search view: ticket-type filter, team filter, booking-linked
+                  toggle (booking vs. standalone Vendor/Corporate Support).
+    -->
+    <record id="helpdesk_ticket_view_form_gopkz" model="ir.ui.view">
+        <field name="name">helpdesk.ticket.form.gopkz</field>
+        <field name="model">helpdesk.ticket</field>
+        <field name="inherit_id" ref="helpdesk.helpdesk_ticket_view_form"/>
+        <field name="arch" type="xml">
+
+            <!-- ── Load hidden helpers ───────────────────────────────────── -->
+            <xpath expr="//sheet/field[@name='company_id']" position="after">
+                <field name="x_is_supplier_confirmation" invisible="1"/>
+            </xpath>
+
+            <!-- ── GOPKZ Details notebook page ───────────────────────────── -->
+            <xpath expr="//notebook" position="inside">
+                <page string="GOPKZ Details" name="gopkz_details">
+                    <group>
+                        <group string="Classification">
+                            <field name="x_ticket_type" string="Ticket Type"/>
+                            <field name="x_service_category_ids"
+                                   widget="many2many_tags"
+                                   string="Service Category"/>
+                        </group>
+                        <group string="Escalation"
+                               invisible="x_ticket_type != 'escalation'">
+                            <field name="x_escalation_team_id"
+                                   string="Responsible Department"
+                                   options="{'no_create': True}"/>
+                        </group>
+                    </group>
+
+                    <group string="Booking Linkage"
+                           invisible="x_ticket_type in ('vendor_support', 'corporate_support')">
+                        <field name="x_hlr_lead_id"
+                               string="Booking"
+                               domain="[('team_id.name', '=', 'Hot Lead Recovery')]"
+                               options="{'no_create': True, 'no_create_edit': True}"/>
+                    </group>
+
+                    <group string="Vendor / Business Linkage"
+                           invisible="x_ticket_type == 'corporate_support'">
+                        <field name="x_vendor_business_id"
+                               string="Business"
+                               options="{'no_create': True, 'no_create_edit': True}"/>
+                        <field name="x_booking_vendor_line_id"
+                               string="Booking Vendor Line"
+                               invisible="not x_is_supplier_confirmation"
+                               options="{'no_create': True, 'no_create_edit': True}"
+                               readonly="x_is_supplier_confirmation"/>
+                    </group>
+
+                    <group string="Corporate Account"
+                           invisible="x_ticket_type != 'corporate_support'">
+                        <field name="x_corporate_account_id"
+                               string="Corporate Account"
+                               options="{'no_create': True, 'no_create_edit': True}"/>
+                    </group>
+
+                    <group string="Closure">
+                        <field name="x_closure_outcome"
+                               string="Closure Outcome"
+                               placeholder="Describe the final outcome before closing this ticket…"
+                               nolabel="1"/>
+                    </group>
+                </page>
+            </xpath>
+
+        </field>
+    </record>
+
+    <!-- ── Search view extension ──────────────────────────────────────────── -->
+    <record id="helpdesk_ticket_view_search_gopkz" model="ir.ui.view">
+        <field name="name">helpdesk.ticket.search.gopkz</field>
+        <field name="model">helpdesk.ticket</field>
+        <field name="inherit_id" ref="helpdesk.helpdesk_tickets_view_search"/>
+        <field name="arch" type="xml">
+            <xpath expr="//search" position="inside">
+                <!-- Filter by ticket type -->
+                <field name="x_ticket_type" string="Ticket Type"/>
+                <filter string="Supplier Confirmation"
+                        name="filter_supplier_confirmation"
+                        domain="[('x_ticket_type', '=', 'supplier_confirmation')]"/>
+                <filter string="Travel Support"
+                        name="filter_travel_support"
+                        domain="[('x_ticket_type', '=', 'travel_support')]"/>
+                <filter string="Vendor Support"
+                        name="filter_vendor_support"
+                        domain="[('x_ticket_type', '=', 'vendor_support')]"/>
+                <filter string="Corporate Support"
+                        name="filter_corporate_support"
+                        domain="[('x_ticket_type', '=', 'corporate_support')]"/>
+                <filter string="Escalations"
+                        name="filter_escalation"
+                        domain="[('x_ticket_type', '=', 'escalation')]"/>
+                <separator/>
+                <!-- Booking-linked vs. standalone -->
+                <filter string="Linked to Booking"
+                        name="filter_has_booking"
+                        domain="[('x_hlr_lead_id', '!=', False)]"/>
+                <filter string="Standalone (No Booking)"
+                        name="filter_no_booking"
+                        domain="[('x_hlr_lead_id', '=', False)]"/>
+                <!-- Group by -->
+                <filter string="Ticket Type"
+                        name="group_ticket_type"
+                        context="{'group_by': 'x_ticket_type'}"/>
+            </xpath>
+        </field>
+    </record>
+
+</odoo>
