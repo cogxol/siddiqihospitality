@@ -85,12 +85,18 @@ class CrmLead(models.Model):
                  for line in self.hlr_vendor_line_ids
                  if line.vendor_id.vendor_category_id}
             )
+            # Primary vendor: use x_vendor_id if set, else first vendor line
+            primary_vendor = self.x_vendor_id
+            if not primary_vendor and self.hlr_vendor_line_ids:
+                primary_vendor = self.hlr_vendor_line_ids[0].vendor_id
+
             vals = {
                 'name': f'Travel Support — {self.name}',
                 'team_id': cx_team.id,
                 'x_ticket_type': 'travel_support',
                 'x_hlr_lead_id': self.id,
                 'partner_id': self.partner_id.id if self.partner_id else False,
+                'x_vendor_business_id': primary_vendor.id if primary_vendor else False,
             }
             if service_cat_ids:
                 vals['x_service_category_ids'] = [(6, 0, service_cat_ids)]
